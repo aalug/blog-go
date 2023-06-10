@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    container_name: blog-go-db
+    environment:
+      - POSTGRES_DB=blog_go_db
+      - POSTGRES_USER=devuser
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blog-go-api
+    ports:
+      - "8080:8080"
+#    entrypoint:
+#      - DB_SOURCE=postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable
+
+
+volumes:
+  dev-db-data:
