@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// createRandomUser creates a random user and returns it
 func createRandomUser(t *testing.T) User {
 	// password not hashed for now
 	params := CreateUserParams{
@@ -31,12 +32,12 @@ func createRandomUser(t *testing.T) User {
 	return user
 }
 
-// TestCreateUser tests the create user function
+// TestQueries_CreateUser tests the create user function
 func TestQueries_CreateUser(t *testing.T) {
 	createRandomUser(t)
 }
 
-// TestGetUser tests the get user function
+// TestQueries_GetUser tests the get user function
 func TestQueries_GetUser(t *testing.T) {
 	user1 := createRandomUser(t)
 	user2, err := testQueries.GetUser(context.Background(), user1.Email)
@@ -50,7 +51,7 @@ func TestQueries_GetUser(t *testing.T) {
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
 }
 
-// TestDeleteUser tests the delete user function
+// TestQueries_DeleteUser tests the delete user function
 func TestQueries_DeleteUser(t *testing.T) {
 	user := createRandomUser(t)
 

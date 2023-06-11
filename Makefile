@@ -9,3 +9,11 @@ migrate_down:
 # generate db related go code with sqlc
 sqlc:
 	cmd.exe /c "docker run --rm -v ${PWD}:/src -w /src kjconroy/sqlc generate"
+
+# run all tests
+test:
+	go test -v -cover ./...
+
+# run tests in the given path (p) and display results in the html file
+test_coverage:
+	go test $(p) -coverprofile=coverage.out && go tool cover -html=coverage.out
