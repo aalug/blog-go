@@ -15,7 +15,7 @@ COPY --from=builder /app/migrate .
 COPY wait-for.sh .
 COPY start.sh .
 
-#COPY dn/migrations ./migrations
+COPY dn/migrations ./migrations
 
 EXPOSE 8080
 CMD [ "/app/main" ]

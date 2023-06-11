@@ -1,6 +1,6 @@
 # run up migrations, user details based on docker-compose.yml
 migrate_up:
-	migrate -path db/migrations -database "postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable" -verbose up
+	migrate -path db/migrations -database "postgresql://devuser:admin@localhost:5432/blog_go_db?sslmode=disable" -verbose up
 
 # run down migrations, user details based on docker-compose.yml
 migrate_down:
