@@ -25,8 +25,8 @@ CREATE TABLE "posts"
     "title"       VARCHAR     NOT NULL,
     "description" VARCHAR     NOT NULL,
     "content"     TEXT        NOT NULL,
-    "author_id"   INTEGER REFERENCES users ("id"),
-    "category_id" INTEGER REFERENCES categories ("id"),
+    "author_id"   INTEGER     NOT NULL REFERENCES users ("id"),
+    "category_id" INTEGER     NOT NULL REFERENCES categories ("id"),
     "image"       VARCHAR     NOT NULL,
     "created_at"  TIMESTAMPTZ NOT NULL DEFAULT (now()),
     "updated_at"  TIMESTAMPTZ NOT NULL DEFAULT (now())
@@ -45,8 +45,8 @@ CREATE INDEX idx_tags_name ON tags ("name");
 
 CREATE TABLE "post_tags"
 (
-    "post_id" BIGINT REFERENCES posts ("id"),
-    "tag_id"  INTEGER REFERENCES tags ("id"),
+    "post_id" BIGINT NOT NULL REFERENCES posts ("id"),
+    "tag_id"  INTEGER NOT NULL REFERENCES tags ("id"),
     PRIMARY KEY ("post_id", "tag_id")
 );
 
@@ -54,8 +54,8 @@ CREATE TABLE "comments"
 (
     "id"         BIGSERIAL PRIMARY KEY,
     "content"    TEXT        NOT NULL,
-    "user_id"    INTEGER REFERENCES users ("id"),
-    "post_id"    INTEGER REFERENCES posts ("id"),
+    "user_id"    INTEGER NOT NULL REFERENCES users ("id"),
+    "post_id"    INTEGER NOT NULL REFERENCES posts ("id"),
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT (NOW())
 );
 
