@@ -23,7 +23,7 @@ func createRandomCategory(t *testing.T) Category {
 
 // TestQueries_CreateCategory tests the create category function
 func TestQueries_CreateCategory(t *testing.T) {
-	createRandomUser(t)
+	createRandomCategory(t)
 }
 
 // TestQueries_ListCategories tests the list categories function
@@ -50,7 +50,7 @@ func TestQueries_ListCategories(t *testing.T) {
 	}
 }
 
-// TestQueries_DeleteCategory tests the delete user function
+// TestQueries_DeleteCategory tests the delete category function
 func TestQueries_DeleteCategory(t *testing.T) {
 	category := createRandomCategory(t)
 
