@@ -26,6 +26,9 @@ type Querier interface {
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)
 	ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]Comment, error)
 	ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPostsRow, error)
+	ListPostsByAuthor(ctx context.Context, arg ListPostsByAuthorParams) ([]ListPostsByAuthorRow, error)
+	ListPostsByCategory(ctx context.Context, arg ListPostsByCategoryParams) ([]ListPostsByCategoryRow, error)
+	ListPostsByTags(ctx context.Context, arg ListPostsByTagsParams) ([]ListPostsByTagsRow, error)
 	ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, error)
 	RemoveTagFromPost(ctx context.Context, arg RemoveTagFromPostParams) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
