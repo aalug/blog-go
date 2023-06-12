@@ -45,7 +45,7 @@ CREATE INDEX idx_tags_name ON tags ("name");
 
 CREATE TABLE "post_tags"
 (
-    "post_id" BIGINT NOT NULL REFERENCES posts ("id"),
+    "post_id" BIGINT  NOT NULL REFERENCES posts ("id"),
     "tag_id"  INTEGER NOT NULL REFERENCES tags ("id"),
     PRIMARY KEY ("post_id", "tag_id")
 );
@@ -54,8 +54,8 @@ CREATE TABLE "comments"
 (
     "id"         BIGSERIAL PRIMARY KEY,
     "content"    TEXT        NOT NULL,
-    "user_id"    INTEGER NOT NULL REFERENCES users ("id"),
-    "post_id"    INTEGER NOT NULL REFERENCES posts ("id"),
+    "user_id"    INTEGER     NOT NULL REFERENCES users ("id"),
+    "post_id"    INTEGER     NOT NULL REFERENCES posts ("id"),
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT (NOW())
 );
 
