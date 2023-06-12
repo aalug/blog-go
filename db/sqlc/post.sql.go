@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const createPost = `-- name: CreatePost :one
@@ -51,7 +53,8 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 }
 
 const deletePost = `-- name: DeletePost :exec
-DELETE FROM posts
+DELETE
+FROM posts
 WHERE id = $1
 `
 
@@ -166,17 +169,197 @@ func (q *Queries) ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPos
 	return items, nil
 }
 
+const listPostsByAuthor = `-- name: ListPostsByAuthor :many
+SELECT p.title,
+       p.description,
+       u.username AS author_username,
+       c.name     AS category_name,
+       p.image,
+       p.created_at
+FROM posts p
+         JOIN users u ON p.author_id = u.id
+         JOIN categories c ON p.category_id = c.id
+WHERE p.author_id = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListPostsByAuthorParams struct {
+	AuthorID int32 `json:"author_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
+}
+
+type ListPostsByAuthorRow struct {
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	AuthorUsername string    `json:"author_username"`
+	CategoryName   string    `json:"category_name"`
+	Image          string    `json:"image"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) ListPostsByAuthor(ctx context.Context, arg ListPostsByAuthorParams) ([]ListPostsByAuthorRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPostsByAuthor, arg.AuthorID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPostsByAuthorRow{}
+	for rows.Next() {
+		var i ListPostsByAuthorRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.Description,
+			&i.AuthorUsername,
+			&i.CategoryName,
+			&i.Image,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostsByCategory = `-- name: ListPostsByCategory :many
+SELECT p.title,
+       p.description,
+       u.username AS author_username,
+       c.name     AS category_name,
+       p.image,
+       p.created_at
+FROM posts p
+         JOIN users u ON p.author_id = u.id
+         JOIN categories c ON p.category_id = c.id
+WHERE c.id = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListPostsByCategoryParams struct {
+	ID     int64 `json:"id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListPostsByCategoryRow struct {
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	AuthorUsername string    `json:"author_username"`
+	CategoryName   string    `json:"category_name"`
+	Image          string    `json:"image"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) ListPostsByCategory(ctx context.Context, arg ListPostsByCategoryParams) ([]ListPostsByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPostsByCategory, arg.ID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPostsByCategoryRow{}
+	for rows.Next() {
+		var i ListPostsByCategoryRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.Description,
+			&i.AuthorUsername,
+			&i.CategoryName,
+			&i.Image,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostsByTags = `-- name: ListPostsByTags :many
+SELECT p.title,
+       p.description,
+       u.username AS author_username,
+       c.name     AS category_name,
+       p.image,
+       p.created_at
+FROM posts p
+         JOIN users u ON p.author_id = u.id
+         JOIN categories c ON p.category_id = c.id
+         JOIN post_tags pt ON p.id = pt.post_id
+         JOIN tags t ON pt.tag_id = t.id
+WHERE t.id = ANY($3::int[])
+ORDER BY p.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListPostsByTagsParams struct {
+	Limit  int32   `json:"limit"`
+	Offset int32   `json:"offset"`
+	TagIds []int32 `json:"tag_ids"`
+}
+
+type ListPostsByTagsRow struct {
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	AuthorUsername string    `json:"author_username"`
+	CategoryName   string    `json:"category_name"`
+	Image          string    `json:"image"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) ListPostsByTags(ctx context.Context, arg ListPostsByTagsParams) ([]ListPostsByTagsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPostsByTags, arg.Limit, arg.Offset, pq.Array(arg.TagIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPostsByTagsRow{}
+	for rows.Next() {
+		var i ListPostsByTagsRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.Description,
+			&i.AuthorUsername,
+			&i.CategoryName,
+			&i.Image,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updatePost = `-- name: UpdatePost :one
 UPDATE posts
-SET
-    title = COALESCE($2, title),
+SET title       = COALESCE($2, title),
     description = COALESCE($3, description),
-    content = COALESCE($4, content),
+    content     = COALESCE($4, content),
     category_id = COALESCE($5, category_id),
-    image = COALESCE($6, image),
-    updated_at = $7
-WHERE
-    id = $1
+    image       = COALESCE($6, image),
+    updated_at  = $7
+WHERE id = $1
 RETURNING id, title, description, content, author_id, category_id, image, created_at, updated_at
 `
 

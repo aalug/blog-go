@@ -20,7 +20,7 @@ func createRandomPost(t *testing.T) Post {
 		Content:     utils.RandomString(10),
 		AuthorID:    int32(user.ID),
 		CategoryID:  int32(category.ID),
-		Image:       "image.jpg",
+		Image:       utils.RandomString(3) + ".png",
 	}
 
 	post, err := testQueries.CreatePost(context.Background(), params)
@@ -99,6 +99,163 @@ func TestQueries_ListPosts(t *testing.T) {
 	require.Len(t, posts, 5)
 
 	for _, post := range posts {
+		require.NotEmpty(t, post)
+		require.NotZero(t, post.CreatedAt)
+	}
+}
+
+// TestQueries_ListPostsByCategory tests the list posts by category function
+func TestQueries_ListPostsByCategory(t *testing.T) {
+	category1 := createRandomCategory(t)
+	category2 := createRandomCategory(t)
+	user := createRandomUser(t)
+
+	for i := 0; i < 10; i++ {
+		var categoryID int64
+		if i%2 == 1 {
+			categoryID = category1.ID
+		} else {
+			categoryID = category2.ID
+		}
+		params := CreatePostParams{
+			Title:       utils.RandomString(7),
+			Description: utils.RandomString(8),
+			Content:     utils.RandomString(9),
+			AuthorID:    int32(user.ID),
+			CategoryID:  int32(categoryID),
+			Image:       "test.jpg",
+		}
+		_, err := testQueries.CreatePost(context.Background(), params)
+		require.NoError(t, err)
+	}
+
+	params := ListPostsByCategoryParams{
+		ID:     category1.ID,
+		Limit:  10,
+		Offset: 0,
+	}
+	var posts []ListPostsByCategoryRow
+	var err error
+
+	posts, err = testQueries.ListPostsByCategory(context.Background(), params)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, posts)
+	// because of limit and offset, it may return up to 10 rows, but only 5 are in the Category1
+	require.Len(t, posts, 5)
+
+	for _, post := range posts {
+		require.NotEmpty(t, post)
+		require.NotZero(t, post.CreatedAt)
+		require.Equal(t, post.CategoryName, category1.Name)
+	}
+}
+
+// TestQueries_ListPostsByAuthor tests the list posts by category function
+func TestQueries_ListPostsByAuthor(t *testing.T) {
+	user1 := createRandomUser(t)
+	user2 := createRandomUser(t)
+
+	for i := 0; i < 10; i++ {
+		var authorID int32
+		if i%2 == 1 {
+			authorID = int32(user1.ID)
+		} else {
+			authorID = int32(user2.ID)
+		}
+		categoryID := int32(createRandomCategory(t).ID)
+		params := CreatePostParams{
+			Title:       utils.RandomString(7),
+			Description: utils.RandomString(8),
+			Content:     utils.RandomString(9),
+			AuthorID:    authorID,
+			CategoryID:  categoryID,
+			Image:       "test.jpg",
+		}
+		_, err := testQueries.CreatePost(context.Background(), params)
+		require.NoError(t, err)
+	}
+
+	params := ListPostsByAuthorParams{
+		AuthorID: int32(user1.ID),
+		Limit:    10,
+		Offset:   0,
+	}
+	var posts []ListPostsByAuthorRow
+	var err error
+
+	posts, err = testQueries.ListPostsByAuthor(context.Background(), params)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, posts)
+	// because of limit and offset, it may return up to 10 rows, but only 5 are written by user1
+	require.Len(t, posts, 5)
+
+	for _, post := range posts {
+		require.NotEmpty(t, post)
+		require.NotZero(t, post.CreatedAt)
+		require.Equal(t, post.AuthorUsername, user1.Username)
+	}
+}
+
+// TestQueries_ListPostsByTags tests the list posts by category function
+func TestQueries_ListPostsByTags(t *testing.T) {
+	tag1 := createRandomTag(t)
+	tag2 := createRandomTag(t)
+	for i := 0; i < 10; i++ {
+		post := createRandomPost(t)
+		if i%2 == 1 {
+			params := AddTagToPostParams{
+				PostID: post.ID,
+				TagID:  tag1.ID,
+			}
+			err := testQueries.AddTagToPost(context.Background(), params)
+			require.NoError(t, err)
+		}
+		if i == 5 {
+			params2 := AddTagToPostParams{
+				PostID: post.ID,
+				TagID:  tag2.ID,
+			}
+			err := testQueries.AddTagToPost(context.Background(), params2)
+			require.NoError(t, err)
+		}
+	}
+
+	params := ListPostsByTagsParams{
+		TagIds: []int32{tag1.ID},
+		Limit:  10,
+		Offset: 0,
+	}
+	var posts []ListPostsByTagsRow
+	var err error
+
+	posts, err = testQueries.ListPostsByTags(context.Background(), params)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, posts)
+	// because of limit and offset, it may return up to 10 rows, but only 5 have tag1
+	require.Len(t, posts, 5)
+
+	for _, post := range posts {
+		require.NotEmpty(t, post)
+		require.NotZero(t, post.CreatedAt)
+	}
+
+	params2 := ListPostsByTagsParams{
+		TagIds: []int32{tag2.ID},
+		Limit:  10,
+		Offset: 0,
+	}
+	var posts2 []ListPostsByTagsRow
+	posts2, err = testQueries.ListPostsByTags(context.Background(), params2)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, posts2)
+	// because of limit and offset, it may return up to 10 rows, but only 1 have tag2
+	require.Len(t, posts2, 1)
+
+	for _, post := range posts2 {
 		require.NotEmpty(t, post)
 		require.NotZero(t, post.CreatedAt)
 	}
