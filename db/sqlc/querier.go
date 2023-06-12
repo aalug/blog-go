@@ -10,15 +10,21 @@ import (
 
 type Querier interface {
 	CreateCategory(ctx context.Context, name string) (Category, error)
+	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreateTag(ctx context.Context, name string) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteCategory(ctx context.Context, name string) error
+	DeletePost(ctx context.Context, id int64) error
 	DeleteTag(ctx context.Context, name string) error
 	DeleteUser(ctx context.Context, email string) error
+	GetPostByID(ctx context.Context, id int64) (Post, error)
+	GetPostByTitle(ctx context.Context, title string) (Post, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)
+	ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPostsRow, error)
 	ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
+	UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)
 }
 

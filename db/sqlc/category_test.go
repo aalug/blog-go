@@ -71,6 +71,6 @@ func TestQueries_UpdateCategory(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, updatedCategory)
 	require.Equal(t, updatedCategory.Name, params.Name_2)
-	require.NotZero(t, updatedCategory.ID)
+	require.Equal(t, updatedCategory.ID, category.ID)
 	require.NotZero(t, updatedCategory.CreatedAt)
 }
