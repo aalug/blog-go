@@ -1,3 +1,7 @@
+# generate migrations, $(name) - name of the migration
+generate_migrations:
+	migrate create -ext sql -dir db/migrations -seq $(name)
+
 # run up migrations, user details based on docker-compose.yml
 migrate_up:
 	migrate -path db/migrations -database "postgresql://devuser:admin@localhost:5432/blog_go_db?sslmode=disable" -verbose up
@@ -17,3 +21,9 @@ test:
 # run tests in the given path (p) and display results in the html file
 test_coverage:
 	go test $(p) -coverprofile=coverage.out && go tool cover -html=coverage.out
+
+# generate mock db for testing
+mock:
+	mockgen -package mockdb -destination db/mock/store.go github.com/aalug/blog-go/db/sqlc Store
+
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock

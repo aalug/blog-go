@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	AddMultipleTagsToPost(ctx context.Context, arg AddMultipleTagsToPostParams) error
 	AddTagToPost(ctx context.Context, arg AddTagToPostParams) error
 	CreateCategory(ctx context.Context, name string) (Category, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
@@ -20,8 +21,10 @@ type Querier interface {
 	DeletePost(ctx context.Context, id int64) error
 	DeleteTag(ctx context.Context, name string) error
 	DeleteUser(ctx context.Context, email string) error
+	GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error)
 	GetPostByID(ctx context.Context, id int64) (Post, error)
 	GetPostByTitle(ctx context.Context, title string) (Post, error)
+	GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)
 	ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]Comment, error)

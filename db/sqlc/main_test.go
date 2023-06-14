@@ -14,6 +14,7 @@ const (
 	DBDriver = "postgres"
 )
 
+var testStore Store
 var testQueries *Queries
 var testDB *sql.DB
 
@@ -24,6 +25,7 @@ func TestMain(m *testing.M) {
 		log.Fatal("cannot connect to db: ", err)
 	}
 
+	testStore = NewStore(testDB)
 	testQueries = New(testDB)
 
 	os.Exit(m.Run())

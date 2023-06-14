@@ -71,3 +71,12 @@ func TestQueries_UpdateTag(t *testing.T) {
 	require.Equal(t, updatedTag.Name, params.Name_2)
 	require.NotZero(t, updatedTag.ID)
 }
+
+// TestQueries_GetOrCreateTags tests the get or create tags function
+func TestQueries_GetOrCreateTags(t *testing.T) {
+	tagNames := []string{"tag1", "tag2", "tag3"}
+	ids, err := testQueries.GetOrCreateTags(context.Background(), tagNames)
+	require.NoError(t, err)
+
+	require.Len(t, ids, 3)
+}
