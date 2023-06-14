@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/lib/pq"
 )
 
 const createTag = `-- name: CreateTag :one
@@ -24,13 +26,52 @@ func (q *Queries) CreateTag(ctx context.Context, name string) (Tag, error) {
 }
 
 const deleteTag = `-- name: DeleteTag :exec
-DELETE FROM tags
+DELETE
+FROM tags
 WHERE name = $1
 `
 
 func (q *Queries) DeleteTag(ctx context.Context, name string) error {
 	_, err := q.db.ExecContext(ctx, deleteTag, name)
 	return err
+}
+
+const getOrCreateTags = `-- name: GetOrCreateTags :many
+WITH input_tags AS (SELECT UNNEST($1::text[]) AS name),
+     created_tags AS (
+         INSERT INTO tags (name)
+             SELECT name FROM input_tags
+             ON CONFLICT (name) DO NOTHING
+             RETURNING id)
+SELECT id
+FROM tags
+WHERE name IN (SELECT name FROM input_tags)
+UNION ALL
+SELECT id
+FROM created_tags
+`
+
+func (q *Queries) GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getOrCreateTags, pq.Array(tagNames))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTags = `-- name: ListTags :many

@@ -7,7 +7,27 @@ package db
 
 import (
 	"context"
+
+	"github.com/lib/pq"
 )
+
+const addMultipleTagsToPost = `-- name: AddMultipleTagsToPost :exec
+WITH input_tags AS (SELECT UNNEST($2::int[]) AS tag_id)
+INSERT
+INTO post_tags (post_id, tag_id)
+SELECT $1, tag_id
+FROM input_tags
+`
+
+type AddMultipleTagsToPostParams struct {
+	PostID int64   `json:"post_id"`
+	TagIds []int32 `json:"tag_ids"`
+}
+
+func (q *Queries) AddMultipleTagsToPost(ctx context.Context, arg AddMultipleTagsToPostParams) error {
+	_, err := q.db.ExecContext(ctx, addMultipleTagsToPost, arg.PostID, pq.Array(arg.TagIds))
+	return err
+}
 
 const addTagToPost = `-- name: AddTagToPost :exec
 INSERT INTO post_tags
@@ -23,6 +43,36 @@ type AddTagToPostParams struct {
 func (q *Queries) AddTagToPost(ctx context.Context, arg AddTagToPostParams) error {
 	_, err := q.db.ExecContext(ctx, addTagToPost, arg.PostID, arg.TagID)
 	return err
+}
+
+const getTagsOfPost = `-- name: GetTagsOfPost :many
+SELECT t.id, t.name
+FROM tags AS t
+         JOIN post_tags AS pt ON pt.tag_id = t.id
+WHERE pt.post_id = $1
+`
+
+func (q *Queries) GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getTagsOfPost, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const removeTagFromPost = `-- name: RemoveTagFromPost :exec
