@@ -74,6 +74,35 @@ func (q *Queries) GetOrCreateTags(ctx context.Context, tagNames []string) ([]int
 	return items, nil
 }
 
+const listTagIDsByNames = `-- name: ListTagIDsByNames :many
+SELECT id
+FROM tags
+WHERE name = ANY ($1::text[])
+`
+
+func (q *Queries) ListTagIDsByNames(ctx context.Context, tagNames []string) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, listTagIDsByNames, pq.Array(tagNames))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTags = `-- name: ListTags :many
 SELECT id, name
 FROM tags
