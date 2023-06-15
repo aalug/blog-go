@@ -21,6 +21,11 @@ SET name = $2
 WHERE name = $1
 RETURNING *;
 
+-- name: ListTagIDsByNames :many
+SELECT id
+FROM tags
+WHERE name = ANY (@tag_names::text[]);
+
 -- name: GetOrCreateTags :many
 WITH input_tags AS (SELECT UNNEST(@tag_names::text[]) AS name),
      created_tags AS (

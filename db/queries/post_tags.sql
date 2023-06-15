@@ -3,11 +3,18 @@ INSERT INTO post_tags
     (post_id, tag_id)
 VALUES ($1, $2);
 
--- name: RemoveTagFromPost :exec
+-- name: DeleteTagsFromPost :exec
+WITH deleted_tags AS (
+    DELETE FROM post_tags
+        WHERE post_id = @post_id::int
+            AND tag_id = ANY (@tag_ids::int[])
+        RETURNING tag_id)
 DELETE
-FROM post_tags
-WHERE post_id = $1
-  AND tag_id = $2;
+FROM tags
+WHERE id IN (SELECT dt.tag_id
+             FROM deleted_tags dt
+             WHERE dt.tag_id NOT IN (SELECT tag_id
+                                     FROM post_tags));
 
 -- name: AddMultipleTagsToPost :exec
 WITH input_tags AS (SELECT UNNEST(@tag_ids::int[]) AS tag_id)

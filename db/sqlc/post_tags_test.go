@@ -19,7 +19,7 @@ func TestQueries_AddTagToPost(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestQueries_RemoveTagFromPost(t *testing.T) {
+func TestQueries_RemoveTagsFromPost(t *testing.T) {
 	post := createRandomPost(t)
 	tag := createRandomTag(t)
 
@@ -30,11 +30,11 @@ func TestQueries_RemoveTagFromPost(t *testing.T) {
 	err := testQueries.AddTagToPost(context.Background(), params)
 	require.NoError(t, err)
 
-	params2 := RemoveTagFromPostParams{
-		PostID: post.ID,
-		TagID:  tag.ID,
+	deleteParams := DeleteTagsFromPostParams{
+		PostID: int32(post.ID),
+		TagIds: []int32{tag.ID},
 	}
 
-	err = testQueries.RemoveTagFromPost(context.Background(), params2)
+	err = testQueries.DeleteTagsFromPost(context.Background(), deleteParams)
 	require.NoError(t, err)
 }

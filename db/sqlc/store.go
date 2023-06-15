@@ -58,7 +58,34 @@ type RemoveTagsFromPostParams struct {
 
 // RemoveTagsFromPost for each tag, checks if it's used by a different post, if not - deletes the tag and post_tags table,
 // if it is used be another post - just deletes the post_tags table
-func (store SQLStore) RemoveTagsFromPost(ctx context.Context, params RemoveTagsFromPostParams) error {
-	//TODO: implement me
-	panic("implement me")
+func (store SQLStore) RemoveTagsFromPost(ctx context.Context, arg RemoveTagsFromPostParams) error {
+	tags, err := store.GetTagsOfPost(ctx, arg.PostID)
+	if err != nil {
+		return err
+	}
+	tagIDs := getTagIDs(tags)
+	tagIDsFromArg, err := store.ListTagIDsByNames(ctx, arg.Tags)
+	if err != nil {
+		return err
+	}
+	tagIDs = append(tagIDs, tagIDsFromArg...)
+
+	params := DeleteTagsFromPostParams{
+		PostID: int32(arg.PostID),
+		TagIds: tagIDs,
+	}
+
+	err = store.DeleteTagsFromPost(ctx, params)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getTagIDs(tags []Tag) []int32 {
+	tagIDs := make([]int32, len(tags))
+	for i, tag := range tags {
+		tagIDs[i] = tag.ID
+	}
+	return tagIDs
 }

@@ -45,6 +45,30 @@ func (q *Queries) AddTagToPost(ctx context.Context, arg AddTagToPostParams) erro
 	return err
 }
 
+const deleteTagsFromPost = `-- name: DeleteTagsFromPost :exec
+WITH deleted_tags AS (
+    DELETE FROM post_tags
+        WHERE post_id = $1::int
+            AND tag_id = ANY ($2::int[])
+        RETURNING tag_id)
+DELETE
+FROM tags
+WHERE id IN (SELECT dt.tag_id
+             FROM deleted_tags dt
+             WHERE dt.tag_id NOT IN (SELECT tag_id
+                                     FROM post_tags))
+`
+
+type DeleteTagsFromPostParams struct {
+	PostID int32   `json:"post_id"`
+	TagIds []int32 `json:"tag_ids"`
+}
+
+func (q *Queries) DeleteTagsFromPost(ctx context.Context, arg DeleteTagsFromPostParams) error {
+	_, err := q.db.ExecContext(ctx, deleteTagsFromPost, arg.PostID, pq.Array(arg.TagIds))
+	return err
+}
+
 const getTagsOfPost = `-- name: GetTagsOfPost :many
 SELECT t.id, t.name
 FROM tags AS t
@@ -73,21 +97,4 @@ func (q *Queries) GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error
 		return nil, err
 	}
 	return items, nil
-}
-
-const removeTagFromPost = `-- name: RemoveTagFromPost :exec
-DELETE
-FROM post_tags
-WHERE post_id = $1
-  AND tag_id = $2
-`
-
-type RemoveTagFromPostParams struct {
-	PostID int64 `json:"post_id"`
-	TagID  int32 `json:"tag_id"`
-}
-
-func (q *Queries) RemoveTagFromPost(ctx context.Context, arg RemoveTagFromPostParams) error {
-	_, err := q.db.ExecContext(ctx, removeTagFromPost, arg.PostID, arg.TagID)
-	return err
 }

@@ -20,6 +20,7 @@ type Querier interface {
 	DeleteComment(ctx context.Context, id int64) error
 	DeletePost(ctx context.Context, id int64) error
 	DeleteTag(ctx context.Context, name string) error
+	DeleteTagsFromPost(ctx context.Context, arg DeleteTagsFromPostParams) error
 	DeleteUser(ctx context.Context, email string) error
 	GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error)
 	GetPostByID(ctx context.Context, id int64) (Post, error)
@@ -32,8 +33,8 @@ type Querier interface {
 	ListPostsByAuthor(ctx context.Context, arg ListPostsByAuthorParams) ([]ListPostsByAuthorRow, error)
 	ListPostsByCategory(ctx context.Context, arg ListPostsByCategoryParams) ([]ListPostsByCategoryRow, error)
 	ListPostsByTags(ctx context.Context, arg ListPostsByTagsParams) ([]ListPostsByTagsRow, error)
+	ListTagIDsByNames(ctx context.Context, tagNames []string) ([]int32, error)
 	ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, error)
-	RemoveTagFromPost(ctx context.Context, arg RemoveTagFromPostParams) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateComment(ctx context.Context, arg UpdateCommentParams) (Comment, error)
 	UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error)
