@@ -2,19 +2,22 @@ package api
 
 import (
 	db "github.com/aalug/blog-go/db/sqlc"
+	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
 // Server serves HTTP  requests for the service
 type Server struct {
+	config utils.Config
 	store  db.Store
 	router *gin.Engine
 }
 
 // NewServer creates a new HTTP server and setups routing
-func NewServer(store db.Store) (*Server, error) {
+func NewServer(config utils.Config, store db.Store) (*Server, error) {
 	server := &Server{
-		store: store,
+		config: config,
+		store:  store,
 	}
 
 	server.setupRouter()
