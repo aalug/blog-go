@@ -2,6 +2,7 @@ package api
 
 import (
 	db "github.com/aalug/blog-go/db/sqlc"
+	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"net/http"
@@ -39,10 +40,16 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
+	hashedPassword, err := utils.HashPassword(request.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	params := db.CreateUserParams{
 		Email:          request.Email,
 		Username:       request.Username,
-		HashedPassword: request.Password,
+		HashedPassword: hashedPassword,
 	}
 
 	user, err := server.store.CreateUser(ctx, params)
