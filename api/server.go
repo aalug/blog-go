@@ -46,6 +46,7 @@ func (server *Server) setupRouter() {
 
 	// --- categories ---
 	authRoutes.POST("/category", server.createCategory)
+	authRoutes.DELETE("/category/:name", server.deleteCategory)
 
 	server.router = router
 }
