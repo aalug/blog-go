@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	mockdb "github.com/aalug/blog-go/db/mock"
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/token"
@@ -123,6 +124,109 @@ func TestCreateCategoryAPI(t *testing.T) {
 
 			url := "/category"
 			req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			tc.setupAuth(t, req, server.tokenMaker)
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func TestDeleteCategoryAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
+	category := db.Category{
+		Name: utils.RandomString(5),
+	}
+
+	testCases := []struct {
+		name          string
+		categoryName  string
+		setupAuth     func(t *testing.T, r *http.Request, maker token.Maker)
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:         "OK",
+			categoryName: category.Name,
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					DeleteCategory(gomock.Any(), gomock.Eq(category.Name)).
+					Times(1).
+					Return(nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNoContent, recorder.Code)
+			},
+		},
+		{
+			name:         "Not Found",
+			categoryName: category.Name,
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					DeleteCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(sql.ErrNoRows)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name:         "Internal Server Error",
+			categoryName: category.Name,
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					DeleteCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:         "Invalid Name",
+			categoryName: "$@#^!",
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					DeleteCategory(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/category/%s", tc.categoryName)
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)
 
 			tc.setupAuth(t, req, server.tokenMaker)

@@ -25,7 +25,7 @@
    or
     - `make test_coverage` to run all tests and see the coverage in the html format
    or
-    - use stanard `go test` commands (e.g. `go test -v ./api`)
+    - use standard `go test` commands (e.g. `go test -v ./api`)
 
 ## API endpoints
 #### Users
@@ -34,3 +34,4 @@
 
 #### Category
  - `/category` - handles POST requests to create categories
+ - `/category/{name}` - handles DELETE requests to delete a category

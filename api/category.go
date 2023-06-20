@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"net/http"
@@ -45,4 +46,30 @@ func (server *Server) createCategory(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, res)
+}
+
+type deleteCategoryRequest struct {
+	Name string `uri:"name" binding:"required,alphanum"`
+}
+
+// deleteCategory handles deleting a category
+func (server *Server) deleteCategory(ctx *gin.Context) {
+	var request deleteCategoryRequest
+	if err := ctx.ShouldBindUri(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := server.store.DeleteCategory(ctx, request.Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }
