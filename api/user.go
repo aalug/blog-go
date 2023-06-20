@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
@@ -67,4 +68,52 @@ func (server *Server) createUser(ctx *gin.Context) {
 	res := newUserResponse(user)
 
 	ctx.JSON(http.StatusCreated, res)
+}
+
+type loginUserRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type loginUserResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
+}
+
+// loginUser handles user login
+func (server *Server) loginUser(ctx *gin.Context) {
+	var request loginUserRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.store.GetUser(ctx, request.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = utils.CheckPassword(request.Password, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	accessToken, err := server.tokenMaker.CreateToken(user.Email, server.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	res := loginUserResponse{
+		AccessToken: accessToken,
+		User:        newUserResponse(user),
+	}
+
+	ctx.JSON(http.StatusOK, res)
 }
