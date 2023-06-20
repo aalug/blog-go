@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	mockdb "github.com/aalug/blog-go/db/mock"
 	db "github.com/aalug/blog-go/db/sqlc"
+	"github.com/aalug/blog-go/token"
 	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -15,9 +16,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestCreateCategoryAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
 	category := db.Category{
 		Name: utils.RandomString(5),
 	}
@@ -25,6 +28,7 @@ func TestCreateCategoryAPI(t *testing.T) {
 	testCases := []struct {
 		name          string
 		body          gin.H
+		setupAuth     func(t *testing.T, r *http.Request, maker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
@@ -32,6 +36,9 @@ func TestCreateCategoryAPI(t *testing.T) {
 			name: "OK",
 			body: gin.H{
 				"name": category.Name,
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -49,6 +56,9 @@ func TestCreateCategoryAPI(t *testing.T) {
 			body: gin.H{
 				"name": category.Name,
 			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateCategory(gomock.Any(), gomock.Any()).
@@ -64,6 +74,9 @@ func TestCreateCategoryAPI(t *testing.T) {
 			body: gin.H{
 				"name": category.Name,
 			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateCategory(gomock.Any(), gomock.Any()).
@@ -78,6 +91,9 @@ func TestCreateCategoryAPI(t *testing.T) {
 			name: "Invalid Name",
 			body: gin.H{
 				"name": "123Invalid$#",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -108,6 +124,8 @@ func TestCreateCategoryAPI(t *testing.T) {
 			url := "/category"
 			req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
+
+			tc.setupAuth(t, req, server.tokenMaker)
 
 			server.router.ServeHTTP(recorder, req)
 
