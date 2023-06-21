@@ -14,9 +14,10 @@
 ## Getting started
 1. Clone the repository
 2. Go to the project's root directory
-3. Run in your terminal:
+3. Rename `app.env.sample` to `app.env` and replace the values
+4. Run in your terminal:
     - `docker-compose up` to run the containers
-4. Now everything should be ready and API available http 
+5. Now everything should be ready and server running on `SERVER_ADDRESS` specified in `app.env`
 
 ## Testing
 1. Run the postgres container (`docker-compose up`)

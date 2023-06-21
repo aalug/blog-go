@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"net/http"
@@ -72,4 +73,31 @@ func (server *Server) deleteCategory(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+type listCategoriesRequest struct {
+	Page     int32 `form:"page" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5"`
+}
+
+// listCategories handles listing categories
+func (server *Server) listCategories(ctx *gin.Context) {
+	var request listCategoriesRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.ListCategoriesParams{
+		Limit:  request.PageSize,
+		Offset: (request.Page - 1) * request.PageSize,
+	}
+
+	categories, err := server.store.ListCategories(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, categories)
 }

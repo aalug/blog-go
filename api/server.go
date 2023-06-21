@@ -41,7 +41,10 @@ func (server *Server) setupRouter() {
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
 
-	// --- routes that require authentication ---
+	// --- categories ---
+	router.GET("/category", server.listCategories)
+
+	// ===== routes that require authentication =====
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 
 	// --- categories ---
