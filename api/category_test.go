@@ -238,6 +238,107 @@ func TestDeleteCategoryAPI(t *testing.T) {
 	}
 }
 
+func TestListCategoriesAPI(t *testing.T) {
+	n := 5
+	categories := make([]db.Category, n)
+	for i := 0; i < n; i++ {
+		categories[i] = db.Category{Name: utils.RandomString(5)}
+	}
+
+	type Query struct {
+		page     int
+		pageSize int
+	}
+
+	testCases := []struct {
+		name          string
+		query         Query
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				params := db.ListCategoriesParams{
+					Limit:  int32(n),
+					Offset: 0,
+				}
+				store.EXPECT().
+					ListCategories(gomock.Any(), gomock.Eq(params)).
+					Times(1).
+					Return(categories, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchCategories(t, recorder.Body, categories)
+			},
+		},
+		{
+			name: "Internal Server Error",
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCategories(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Category{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Page Size",
+			query: Query{
+				page:     1,
+				pageSize: 4,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCategories(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := "/category"
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			// Add query params
+			q := req.URL.Query()
+			q.Add("page", fmt.Sprintf("%d", tc.query.page))
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
+			req.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 func requireBodyMatchCategory(t *testing.T, body *bytes.Buffer, category db.Category) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
@@ -246,4 +347,14 @@ func requireBodyMatchCategory(t *testing.T, body *bytes.Buffer, category db.Cate
 	err = json.Unmarshal(data, &gotCategory)
 	require.NoError(t, err)
 	require.Equal(t, category, gotCategory)
+}
+
+func requireBodyMatchCategories(t *testing.T, body *bytes.Buffer, categories []db.Category) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var gotCategories []db.Category
+	err = json.Unmarshal(data, &gotCategories)
+	require.NoError(t, err)
+	require.Equal(t, categories, gotCategories)
 }
