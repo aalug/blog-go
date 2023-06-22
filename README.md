@@ -16,7 +16,7 @@
 2. Go to the project's root directory
 3. Rename `app.env.sample` to `app.env` and replace the values
 4. Run in your terminal:
-    - `docker-compose up` to run the containers
+    - `docker-compose up --build` to run the containers
 5. Now everything should be ready and server running on `SERVER_ADDRESS` specified in `app.env`
 
 ## Testing
@@ -24,7 +24,7 @@
 2. Run in your terminal:
     - `make test` to run all tests
    or
-    - `make test_coverage` to run all tests and see the coverage in the html format
+    - `make test_coverage p={PATH}` - to get the coverage in the HTML format - where `{PATH}` is the path to the target directory for which you want to generate test coverage. The `{PATH}` should be replaced with the actual path you want to use. For example `./api`
    or
     - use standard `go test` commands (e.g. `go test -v ./api`)
 
