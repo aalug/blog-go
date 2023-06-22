@@ -22,9 +22,10 @@ type Querier interface {
 	DeleteTag(ctx context.Context, name string) error
 	DeleteTagsFromPost(ctx context.Context, arg DeleteTagsFromPostParams) error
 	DeleteUser(ctx context.Context, email string) error
+	GetOrCreateCategory(ctx context.Context, name string) (int64, error)
 	GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error)
-	GetPostByID(ctx context.Context, id int64) (Post, error)
-	GetPostByTitle(ctx context.Context, title string) (Post, error)
+	GetPostByID(ctx context.Context, id int64) (GetPostByIDRow, error)
+	GetPostByTitle(ctx context.Context, title string) (GetPostByTitleRow, error)
 	GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)

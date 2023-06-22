@@ -24,13 +24,35 @@ func (q *Queries) CreateCategory(ctx context.Context, name string) (Category, er
 }
 
 const deleteCategory = `-- name: DeleteCategory :exec
-DELETE FROM categories
+DELETE
+FROM categories
 WHERE name = $1
 `
 
 func (q *Queries) DeleteCategory(ctx context.Context, name string) error {
 	_, err := q.db.ExecContext(ctx, deleteCategory, name)
 	return err
+}
+
+const getOrCreateCategory = `-- name: GetOrCreateCategory :one
+WITH new_category AS (
+    INSERT INTO categories (name)
+        VALUES ($1)
+        ON CONFLICT (name) DO NOTHING
+        RETURNING id)
+SELECT id
+FROM new_category
+UNION
+SELECT id
+FROM categories
+WHERE name = $1
+`
+
+func (q *Queries) GetOrCreateCategory(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getOrCreateCategory, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const listCategories = `-- name: ListCategories :many

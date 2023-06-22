@@ -64,49 +64,85 @@ func (q *Queries) DeletePost(ctx context.Context, id int64) error {
 }
 
 const getPostByID = `-- name: GetPostByID :one
-SELECT id, title, description, content, author_id, category_id, image, created_at, updated_at
-FROM posts
-WHERE id = $1
-LIMIT 1
+SELECT p.id,
+       p.title,
+       p.description,
+       p.content,
+       u.username AS author_username,
+       c.name     AS category_name,
+       p.image,
+       p.created_at
+FROM posts p
+         JOIN users u ON p.author_id = u.id
+         JOIN categories c ON p.category_id = c.id
+WHERE p.id = $1
 `
 
-func (q *Queries) GetPostByID(ctx context.Context, id int64) (Post, error) {
+type GetPostByIDRow struct {
+	ID             int64     `json:"id"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	Content        string    `json:"content"`
+	AuthorUsername string    `json:"author_username"`
+	CategoryName   string    `json:"category_name"`
+	Image          string    `json:"image"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) GetPostByID(ctx context.Context, id int64) (GetPostByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostByID, id)
-	var i Post
+	var i GetPostByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Description,
 		&i.Content,
-		&i.AuthorID,
-		&i.CategoryID,
+		&i.AuthorUsername,
+		&i.CategoryName,
 		&i.Image,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getPostByTitle = `-- name: GetPostByTitle :one
-SELECT id, title, description, content, author_id, category_id, image, created_at, updated_at
-FROM posts
-WHERE title = $1
-LIMIT 1
+SELECT p.id,
+       p.title,
+       p.description,
+       p.content,
+       u.username AS author_username,
+       c.name     AS category_name,
+       p.image,
+       p.created_at
+FROM posts p
+         JOIN users u ON p.author_id = u.id
+         JOIN categories c ON p.category_id = c.id
+WHERE p.title = $1
 `
 
-func (q *Queries) GetPostByTitle(ctx context.Context, title string) (Post, error) {
+type GetPostByTitleRow struct {
+	ID             int64     `json:"id"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	Content        string    `json:"content"`
+	AuthorUsername string    `json:"author_username"`
+	CategoryName   string    `json:"category_name"`
+	Image          string    `json:"image"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) GetPostByTitle(ctx context.Context, title string) (GetPostByTitleRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostByTitle, title)
-	var i Post
+	var i GetPostByTitleRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Description,
 		&i.Content,
-		&i.AuthorID,
-		&i.CategoryID,
+		&i.AuthorUsername,
+		&i.CategoryName,
 		&i.Image,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -301,7 +337,7 @@ FROM posts p
          JOIN categories c ON p.category_id = c.id
          JOIN post_tags pt ON p.id = pt.post_id
          JOIN tags t ON pt.tag_id = t.id
-WHERE t.id = ANY($3::int[])
+WHERE t.id = ANY ($3::int[])
 ORDER BY p.created_at DESC
 LIMIT $1 OFFSET $2
 `
