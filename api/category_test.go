@@ -339,6 +339,149 @@ func TestListCategoriesAPI(t *testing.T) {
 	}
 }
 
+func TestUpdateCategoryAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
+	category := db.Category{
+		Name: utils.RandomString(5),
+	}
+	newName := "category"
+
+	testCases := []struct {
+		name          string
+		body          gin.H
+		setupAuth     func(t *testing.T, r *http.Request, maker token.Maker)
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: gin.H{
+				"old_name": category.Name,
+				"new_name": newName,
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				params := db.UpdateCategoryParams{
+					Name:   category.Name,
+					Name_2: newName,
+				}
+				store.EXPECT().
+					UpdateCategory(gomock.Any(), gomock.Eq(params)).
+					Times(1).
+					Return(category, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchCategory(t, recorder.Body, category)
+			},
+		},
+		{
+			name: "Not Found",
+			body: gin.H{
+				"old_name": category.Name,
+				"new_name": newName,
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					UpdateCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Category{}, sql.ErrNoRows)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name: "Internal Server Error",
+			body: gin.H{
+				"old_name": category.Name,
+				"new_name": newName,
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					UpdateCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Category{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Name",
+			body: gin.H{
+				"old_name": category.Name,
+				"new_name": "12%  __",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					UpdateCategory(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "Duplicated New Name",
+			body: gin.H{
+				"old_name": category.Name,
+				"new_name": newName,
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					UpdateCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Category{}, &pq.Error{Code: "23505"})
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			data, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			url := "/category"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			tc.setupAuth(t, req, server.tokenMaker)
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 func requireBodyMatchCategory(t *testing.T, body *bytes.Buffer, category db.Category) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
