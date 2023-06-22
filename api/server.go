@@ -50,6 +50,7 @@ func (server *Server) setupRouter() {
 	// --- categories ---
 	authRoutes.POST("/category", server.createCategory)
 	authRoutes.DELETE("/category/:name", server.deleteCategory)
+	authRoutes.PATCH("/category", server.updateCategory)
 
 	server.router = router
 }

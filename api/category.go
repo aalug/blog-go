@@ -10,7 +10,7 @@ import (
 )
 
 type createCategoryRequest struct {
-	Name string `json:"name" binding:"required,alphanum"`
+	Name string `json:"name" binding:"required,alpha"`
 }
 
 type createCategoryResponse struct {
@@ -50,7 +50,7 @@ func (server *Server) createCategory(ctx *gin.Context) {
 }
 
 type deleteCategoryRequest struct {
-	Name string `uri:"name" binding:"required,alphanum"`
+	Name string `uri:"name" binding:"required,alpha"`
 }
 
 // deleteCategory handles deleting a category
@@ -100,4 +100,43 @@ func (server *Server) listCategories(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, categories)
+}
+
+type updateCategoryRequest struct {
+	OldName string `json:"old_name" binding:"required,alpha"`
+	NewName string `json:"new_name" binding:"required,alpha"`
+}
+
+// updateCategory handles updating a category
+func (server *Server) updateCategory(ctx *gin.Context) {
+	var request updateCategoryRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.UpdateCategoryParams{
+		Name:   request.OldName,
+		Name_2: request.NewName,
+	}
+
+	category, err := server.store.UpdateCategory(ctx, params)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, category)
 }
