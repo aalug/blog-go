@@ -4,8 +4,22 @@ INSERT INTO categories
 VALUES ($1)
 RETURNING *;
 
+-- name: GetOrCreateCategory :one
+WITH new_category AS (
+    INSERT INTO categories (name)
+        VALUES ($1)
+        ON CONFLICT (name) DO NOTHING
+        RETURNING id)
+SELECT id
+FROM new_category
+UNION
+SELECT id
+FROM categories
+WHERE name = $1;
+
 -- name: DeleteCategory :exec
-DELETE FROM categories
+DELETE
+FROM categories
 WHERE name = $1;
 
 -- name: ListCategories :many

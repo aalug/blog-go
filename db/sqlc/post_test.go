@@ -55,11 +55,10 @@ func TestQueries_GetPostByID(t *testing.T) {
 	require.Equal(t, post.Title, post2.Title)
 	require.Equal(t, post.Description, post2.Description)
 	require.Equal(t, post.Content, post2.Content)
-	require.Equal(t, post.AuthorID, post2.AuthorID)
-	require.Equal(t, post.CategoryID, post2.CategoryID)
+	require.NotEmpty(t, post2.AuthorUsername)
+	require.NotEmpty(t, post2.CategoryName)
 	require.Equal(t, post.Image, post2.Image)
 	require.WithinDuration(t, post.CreatedAt, post2.CreatedAt, time.Second)
-	require.WithinDuration(t, post.UpdatedAt, post2.UpdatedAt, time.Second)
 }
 
 // TestQueries_GetPostByTitle tests the get post by title function
@@ -72,11 +71,10 @@ func TestQueries_GetPostByTitle(t *testing.T) {
 	require.Equal(t, post.Title, post2.Title)
 	require.Equal(t, post.Description, post2.Description)
 	require.Equal(t, post.Content, post2.Content)
-	require.Equal(t, post.AuthorID, post2.AuthorID)
-	require.Equal(t, post.CategoryID, post2.CategoryID)
+	require.NotEmpty(t, post2.AuthorUsername)
+	require.NotEmpty(t, post2.CategoryName)
 	require.Equal(t, post.Image, post2.Image)
 	require.WithinDuration(t, post.CreatedAt, post2.CreatedAt, time.Second)
-	require.WithinDuration(t, post.UpdatedAt, post2.UpdatedAt, time.Second)
 }
 
 // TestQueries_ListPosts tests the list posts function

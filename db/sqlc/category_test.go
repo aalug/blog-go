@@ -26,6 +26,13 @@ func TestQueries_CreateCategory(t *testing.T) {
 	createRandomCategory(t)
 }
 
+func TestSQLStore_GetOrCreateCategory(t *testing.T) {
+	name := utils.RandomString(6)
+	id, err := testQueries.GetOrCreateCategory(context.Background(), name)
+	require.NoError(t, err)
+	require.NotZero(t, id)
+}
+
 // TestQueries_ListCategories tests the list categories function
 func TestQueries_ListCategories(t *testing.T) {
 	for i := 0; i < 10; i++ {

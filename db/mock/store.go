@@ -236,6 +236,21 @@ func (mr *MockStoreMockRecorder) DeleteUser(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockStore)(nil).DeleteUser), arg0, arg1)
 }
 
+// GetOrCreateCategory mocks base method.
+func (m *MockStore) GetOrCreateCategory(arg0 context.Context, arg1 string) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrCreateCategory", arg0, arg1)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrCreateCategory indicates an expected call of GetOrCreateCategory.
+func (mr *MockStoreMockRecorder) GetOrCreateCategory(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrCreateCategory", reflect.TypeOf((*MockStore)(nil).GetOrCreateCategory), arg0, arg1)
+}
+
 // GetOrCreateTags mocks base method.
 func (m *MockStore) GetOrCreateTags(arg0 context.Context, arg1 []string) ([]int32, error) {
 	m.ctrl.T.Helper()
@@ -252,10 +267,10 @@ func (mr *MockStoreMockRecorder) GetOrCreateTags(arg0, arg1 interface{}) *gomock
 }
 
 // GetPostByID mocks base method.
-func (m *MockStore) GetPostByID(arg0 context.Context, arg1 int64) (db.Post, error) {
+func (m *MockStore) GetPostByID(arg0 context.Context, arg1 int64) (db.GetPostByIDRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPostByID", arg0, arg1)
-	ret0, _ := ret[0].(db.Post)
+	ret0, _ := ret[0].(db.GetPostByIDRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -267,10 +282,10 @@ func (mr *MockStoreMockRecorder) GetPostByID(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // GetPostByTitle mocks base method.
-func (m *MockStore) GetPostByTitle(arg0 context.Context, arg1 string) (db.Post, error) {
+func (m *MockStore) GetPostByTitle(arg0 context.Context, arg1 string) (db.GetPostByTitleRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPostByTitle", arg0, arg1)
-	ret0, _ := ret[0].(db.Post)
+	ret0, _ := ret[0].(db.GetPostByTitleRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
