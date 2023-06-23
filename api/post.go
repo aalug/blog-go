@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/token"
 	"github.com/gin-gonic/gin"
@@ -84,4 +86,52 @@ func (server *Server) createPost(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, res)
+}
+
+type deletePostRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+// deletePost deletes a post. Checks if the authenticated user is
+// the author of the post, and if so, deletes the post.
+func (server *Server) deletePost(ctx *gin.Context) {
+	var request deletePostRequest
+	if err := ctx.ShouldBindUri(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authUser, err := server.store.GetUser(ctx, authPayload.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// special function to get the bare minimum post data to validate the user
+	// (is the logged-in user an author of this post)
+	post, err := server.store.GetMinimalPostData(ctx, int64(request.ID))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if post.AuthorID != int32(authUser.ID) {
+		err := errors.New("post does not belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	err = server.store.DeletePost(ctx, int64(request.ID))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }

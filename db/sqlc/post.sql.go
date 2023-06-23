@@ -63,6 +63,26 @@ func (q *Queries) DeletePost(ctx context.Context, id int64) error {
 	return err
 }
 
+const getMinimalPostData = `-- name: GetMinimalPostData :one
+SELECT
+    id,
+    author_id
+FROM posts
+WHERE id = $1
+`
+
+type GetMinimalPostDataRow struct {
+	ID       int64 `json:"id"`
+	AuthorID int32 `json:"author_id"`
+}
+
+func (q *Queries) GetMinimalPostData(ctx context.Context, id int64) (GetMinimalPostDataRow, error) {
+	row := q.db.QueryRowContext(ctx, getMinimalPostData, id)
+	var i GetMinimalPostDataRow
+	err := row.Scan(&i.ID, &i.AuthorID)
+	return i, err
+}
+
 const getPostByID = `-- name: GetPostByID :one
 SELECT p.id,
        p.title,

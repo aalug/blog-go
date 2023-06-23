@@ -236,6 +236,21 @@ func (mr *MockStoreMockRecorder) DeleteUser(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockStore)(nil).DeleteUser), arg0, arg1)
 }
 
+// GetMinimalPostData mocks base method.
+func (m *MockStore) GetMinimalPostData(arg0 context.Context, arg1 int64) (db.GetMinimalPostDataRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMinimalPostData", arg0, arg1)
+	ret0, _ := ret[0].(db.GetMinimalPostDataRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMinimalPostData indicates an expected call of GetMinimalPostData.
+func (mr *MockStoreMockRecorder) GetMinimalPostData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMinimalPostData", reflect.TypeOf((*MockStore)(nil).GetMinimalPostData), arg0, arg1)
+}
+
 // GetOrCreateCategory mocks base method.
 func (m *MockStore) GetOrCreateCategory(arg0 context.Context, arg1 string) (int64, error) {
 	m.ctrl.T.Helper()
