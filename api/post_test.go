@@ -486,6 +486,136 @@ func TestDeletePostAPI(t *testing.T) {
 	}
 }
 
+func TestGetPostByIDAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
+	category, post, _ := generateRandomCategoryPostAndTags(int32(randomUser.ID))
+	data := db.GetPostByIDRow{
+		ID:             post.ID,
+		Title:          post.Title,
+		Description:    post.Description,
+		Content:        post.Content,
+		AuthorUsername: randomUser.Username,
+		CategoryName:   category.Name,
+		Image:          post.Image,
+		CreatedAt:      post.CreatedAt,
+	}
+	tags := []db.Tag{
+		{ID: 1, Name: utils.RandomString(3)},
+		{ID: 2, Name: utils.RandomString(4)},
+	}
+
+	testCases := []struct {
+		name          string
+		postID        int64
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:   "OK",
+			postID: post.ID,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByID(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(data, nil)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(tags, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name:   "Invalid Post ID",
+			postID: 0,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByID(gomock.Any(), gomock.Any()).
+					Times(0)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Not Found",
+			postID: post.ID,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByID(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetPostByIDRow{}, sql.ErrNoRows)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetPostByID",
+			postID: post.ID,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByID(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetPostByIDRow{}, sql.ErrConnDone)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetTagsOfPost",
+			postID: post.ID,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByID(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(data, nil)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Tag{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/posts/%d", tc.postID)
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 // generateRandomCategoryPostAndTags generates random category, post and tags
 func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []string) {
 	category := db.Category{
