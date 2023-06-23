@@ -135,3 +135,60 @@ func (server *Server) deletePost(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusNoContent, nil)
 }
+
+type getPostByIDRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+type getPostResponse struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Content     string   `json:"content"`
+	Author      string   `json:"author"`
+	Category    string   `json:"category"`
+	Tags        []string `json:"tags"`
+	Image       string   `json:"image"`
+}
+
+// getPostByID gets post details by id
+func (server *Server) getPostByID(ctx *gin.Context) {
+	var request getPostByIDRequest
+	if err := ctx.ShouldBindUri(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	post, err := server.store.GetPostByID(ctx, request.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// get tags for this post
+	tags, err := server.store.GetTagsOfPost(ctx, post.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	tagNames := make([]string, len(tags))
+	for i, tag := range tags {
+		tagNames[i] = tag.Name
+	}
+
+	res := getPostResponse{
+		Title:       post.Title,
+		Description: post.Description,
+		Content:     post.Content,
+		Author:      post.AuthorUsername,
+		Category:    post.CategoryName,
+		Tags:        tagNames,
+		Image:       post.Image,
+	}
+
+	ctx.JSON(http.StatusOK, res)
+}
