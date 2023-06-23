@@ -4,6 +4,13 @@ INSERT INTO posts
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
+-- name: GetMinimalPostData :one
+SELECT
+    id,
+    author_id
+FROM posts
+WHERE id = $1;
+
 -- name: GetPostByID :one
 SELECT p.id,
        p.title,

@@ -22,6 +22,7 @@ type Querier interface {
 	DeleteTag(ctx context.Context, name string) error
 	DeleteTagsFromPost(ctx context.Context, arg DeleteTagsFromPostParams) error
 	DeleteUser(ctx context.Context, email string) error
+	GetMinimalPostData(ctx context.Context, id int64) (GetMinimalPostDataRow, error)
 	GetOrCreateCategory(ctx context.Context, name string) (int64, error)
 	GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error)
 	GetPostByID(ctx context.Context, id int64) (GetPostByIDRow, error)

@@ -294,3 +294,14 @@ func TestQueries_UpdatePost(t *testing.T) {
 	require.Equal(t, updatedPost.Description, params.Description)
 	require.WithinDuration(t, updatedPost.UpdatedAt, params.UpdatedAt, time.Second)
 }
+
+// TestQueries_GetMinimalPostData tests the get minimal post data function
+func TestQueries_GetMinimalPostData(t *testing.T) {
+	post := createRandomPost(t)
+
+	post2, err := testQueries.GetMinimalPostData(context.Background(), post.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, post2)
+	require.Equal(t, post.ID, post2.ID)
+	require.Equal(t, post.AuthorID, post2.AuthorID)
+}
