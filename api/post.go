@@ -7,6 +7,7 @@ import (
 	"github.com/aalug/blog-go/token"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 )
 
 type createPostRequest struct {
@@ -159,6 +160,55 @@ func (server *Server) getPostByID(ctx *gin.Context) {
 	}
 
 	post, err := server.store.GetPostByID(ctx, request.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// get tags for this post
+	tags, err := server.store.GetTagsOfPost(ctx, post.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	tagNames := make([]string, len(tags))
+	for i, tag := range tags {
+		tagNames[i] = tag.Name
+	}
+
+	res := getPostResponse{
+		Title:       post.Title,
+		Description: post.Description,
+		Content:     post.Content,
+		Author:      post.AuthorUsername,
+		Category:    post.CategoryName,
+		Tags:        tagNames,
+		Image:       post.Image,
+	}
+
+	ctx.JSON(http.StatusOK, res)
+}
+
+type getPostByTitleRequest struct {
+	Slug string `uri:"slug" binding:"required,slug"`
+}
+
+// getPostByID gets post details by title
+func (server *Server) getPostByTitle(ctx *gin.Context) {
+	var request getPostByTitleRequest
+	if err := ctx.ShouldBindUri(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	title := strings.ReplaceAll(request.Slug, "-", " ")
+
+	post, err := server.store.GetPostByTitle(ctx, title)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
