@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -605,7 +606,139 @@ func TestGetPostByIDAPI(t *testing.T) {
 			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/posts/%d", tc.postID)
+			url := fmt.Sprintf("/posts/id/%d", tc.postID)
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func TestGetPostByTitleAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
+	category, post, _ := generateRandomCategoryPostAndTags(int32(randomUser.ID))
+	data := db.GetPostByTitleRow{
+		ID:             post.ID,
+		Title:          post.Title,
+		Description:    post.Description,
+		Content:        post.Content,
+		AuthorUsername: randomUser.Username,
+		CategoryName:   category.Name,
+		Image:          post.Image,
+		CreatedAt:      post.CreatedAt,
+	}
+	tags := []db.Tag{
+		{ID: 1, Name: utils.RandomString(3)},
+		{ID: 2, Name: utils.RandomString(4)},
+	}
+
+	testCases := []struct {
+		name          string
+		postTitle     string
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:      "OK",
+			postTitle: post.Title,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByTitle(gomock.Any(), gomock.Eq(post.Title)).
+					Times(1).
+					Return(data, nil)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(tags, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name:      "Invalid Slug",
+			postTitle: "invalid_slug#",
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByTitle(gomock.Any(), gomock.Any()).
+					Times(0)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:      "Not Found",
+			postTitle: post.Title,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByTitle(gomock.Any(), gomock.Eq(post.Title)).
+					Times(1).
+					Return(db.GetPostByTitleRow{}, sql.ErrNoRows)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name:      "Internal Server Error GetPostByTitle",
+			postTitle: post.Title,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByTitle(gomock.Any(), gomock.Eq(post.Title)).
+					Times(1).
+					Return(db.GetPostByTitleRow{}, sql.ErrConnDone)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:      "Internal Server Error GetTagsOfPost",
+			postTitle: post.Title,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetPostByTitle(gomock.Any(), gomock.Eq(post.Title)).
+					Times(1).
+					Return(data, nil)
+				store.EXPECT().
+					GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Tag{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			slug := strings.ReplaceAll(tc.postTitle, " ", "-")
+
+			url := fmt.Sprintf("/posts/title/%s", slug)
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 

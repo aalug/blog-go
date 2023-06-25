@@ -6,6 +6,9 @@ import (
 	"github.com/aalug/blog-go/token"
 	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
+	"log"
 )
 
 // Server serves HTTP  requests for the service
@@ -28,6 +31,13 @@ func NewServer(config utils.Config, store db.Store) (*Server, error) {
 		tokenMaker: tokenMaker,
 	}
 
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		err := v.RegisterValidation("slug", isValidSlug)
+		if err != nil {
+			log.Fatal("failed to register validation")
+		}
+	}
+
 	server.setupRouter()
 
 	return server, nil
@@ -45,7 +55,8 @@ func (server *Server) setupRouter() {
 	router.GET("/category", server.listCategories)
 
 	// --- posts ---
-	router.GET("/posts/:id", server.getPostByID)
+	router.GET("/posts/id/:id", server.getPostByID)
+	router.GET("/posts/title/:slug", server.getPostByTitle)
 
 	// ===== routes that require authentication =====
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))

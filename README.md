@@ -36,3 +36,9 @@
 #### Category
  - `/category` - handles POST requests to create categories
  - `/category/{name}` - handles DELETE requests to delete a category
+
+### Posts
+- `/posts` - handles POST requests to create posts
+- `/posts/{id}` - handles DELETE requests to delete a post
+- `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
+
