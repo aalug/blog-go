@@ -242,3 +242,30 @@ func (server *Server) getPostByTitle(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, res)
 }
+
+type listPostsRequest struct {
+	Page     int32 `form:"page" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=15"`
+}
+
+// listPosts lists all posts
+func (server *Server) listPosts(ctx *gin.Context) {
+	var request listPostsRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.ListPostsParams{
+		Limit:  request.PageSize,
+		Offset: (request.Page - 1) * request.PageSize,
+	}
+
+	posts, err := server.store.ListPosts(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, posts)
+}

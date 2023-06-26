@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -749,6 +750,115 @@ func TestGetPostByTitleAPI(t *testing.T) {
 	}
 }
 
+func TestListPostsAPI(t *testing.T) {
+	n := 10
+	posts := make([]db.ListPostsRow, n)
+	for i := 0; i < n; i++ {
+		post := db.ListPostsRow{
+			Title:          utils.RandomString(5),
+			Description:    utils.RandomString(5),
+			AuthorUsername: utils.RandomString(5),
+			CategoryName:   utils.RandomString(5),
+			Image:          utils.RandomString(5) + "jpg",
+			CreatedAt:      time.Now(),
+		}
+		posts[i] = post
+	}
+
+	type Query struct {
+		page     int
+		pageSize int
+	}
+
+	testCases := []struct {
+		name          string
+		query         Query
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				params := db.ListPostsParams{
+					Limit:  int32(n),
+					Offset: 0,
+				}
+				store.EXPECT().
+					ListPosts(gomock.Any(), params).
+					Times(1).
+					Return(posts, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchPosts(t, recorder.Body, posts)
+			},
+		},
+		{
+			name: "Internal Server Error",
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListPosts(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.ListPostsRow{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Page Size",
+			query: Query{
+				page:     1,
+				pageSize: 99,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListPosts(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := "/posts/all"
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			// Add query params
+			q := req.URL.Query()
+			q.Add("page", fmt.Sprintf("%d", tc.query.page))
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
+			req.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 // generateRandomCategoryPostAndTags generates random category, post and tags
 func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []string) {
 	category := db.Category{
@@ -773,4 +883,23 @@ func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []st
 	}
 
 	return category, post, tags
+}
+
+// requireBodyMatchPosts  checks if the body of the response matches the posts
+func requireBodyMatchPosts(t *testing.T, body *bytes.Buffer, posts []db.ListPostsRow) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var gotPosts []db.ListPostsRow
+	err = json.Unmarshal(data, &gotPosts)
+	require.NoError(t, err)
+
+	for i := 0; i < len(posts); i++ {
+		require.Equal(t, posts[i].Title, gotPosts[i].Title)
+		require.Equal(t, posts[i].Description, gotPosts[i].Description)
+		require.Equal(t, posts[i].AuthorUsername, gotPosts[i].AuthorUsername)
+		require.Equal(t, posts[i].CategoryName, gotPosts[i].CategoryName)
+		require.Equal(t, posts[i].Image, gotPosts[i].Image)
+		require.WithinDuration(t, posts[i].CreatedAt, gotPosts[i].CreatedAt, time.Second)
+	}
 }
