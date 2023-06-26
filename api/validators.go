@@ -11,3 +11,10 @@ var isValidSlug validator.Func = func(fieldLevel validator.FieldLevel) bool {
 	}
 	return false
 }
+
+var isValidTagList validator.Func = func(fieldLevel validator.FieldLevel) bool {
+	if tagList, ok := fieldLevel.Field().Interface().(string); ok {
+		return utils.IsTagList(tagList)
+	}
+	return false
+}

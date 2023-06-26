@@ -42,7 +42,9 @@
 - `/posts/{id}` - handles DELETE requests to delete a post
 - `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
 - `/posts/all` - handles GET requests to list all posts. Query params: `page`, `page_size`
-- `/posts/author` - handles GET requests to list all posts created by author 
+- `/posts/author` - handles GET requests to list posts created by author 
 with given name (that username or email contain given string). 
 Query params: `page`, `page_size`, `author`
+- `/posts/category` - handles GET requests to list posts from the given category.
+Query params: `page`, `page_size`, `category_id`
 

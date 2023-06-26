@@ -36,6 +36,11 @@ func NewServer(config utils.Config, store db.Store) (*Server, error) {
 		if err != nil {
 			log.Fatal("failed to register validation")
 		}
+
+		err = v.RegisterValidation("tags", isValidTagList)
+		if err != nil {
+			log.Fatal("failed to register validation")
+		}
 	}
 
 	server.setupRouter()
@@ -60,6 +65,7 @@ func (server *Server) setupRouter() {
 	router.GET("/posts/all", server.listPosts)
 	router.GET("/posts/author", server.listPostsByAuthor)
 	router.GET("/posts/category", server.listPostsByCategory)
+	router.GET("/posts/tags", server.listPostsByTags)
 
 	// ===== routes that require authentication =====
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))

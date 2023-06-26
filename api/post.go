@@ -5,6 +5,7 @@ import (
 	"errors"
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/token"
+	"github.com/aalug/blog-go/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -354,6 +355,50 @@ func (server *Server) listPostsByCategory(ctx *gin.Context) {
 
 	if len(posts) == 0 {
 		err := errors.New("no posts found in the given category")
+		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, posts)
+}
+
+// listPostsByTagsRequest represents the request to list posts by tags
+// where tag_ids is a comma separated list of tag ids
+type listPostsByTagsRequest struct {
+	Page     int32  `form:"page" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=5,max=15"`
+	TagIDs   string `form:"tag_ids" binding:"required,tags"`
+}
+
+// listPostsByTags lists posts with the given tags
+func (server *Server) listPostsByTags(ctx *gin.Context) {
+	var request listPostsByTagsRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// get tag ids from the request and convert into a slice of int32
+	tagIDs, err := utils.TagsToIntSlice(request.TagIDs)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.ListPostsByTagsParams{
+		Limit:  request.PageSize,
+		Offset: (request.Page - 1) * request.PageSize,
+		TagIds: tagIDs,
+	}
+
+	posts, err := server.store.ListPostsByTags(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if len(posts) == 0 {
+		err := errors.New("no posts found with given tags")
 		ctx.JSON(http.StatusNotFound, errorResponse(err))
 		return
 	}
