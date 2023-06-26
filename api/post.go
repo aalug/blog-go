@@ -325,3 +325,38 @@ func (server *Server) listPostsByAuthor(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, allPosts)
 }
+
+type listPostsByCategoryRequest struct {
+	Page       int32 `form:"page" binding:"required,min=1"`
+	PageSize   int32 `form:"page_size" binding:"required,min=5,max=15"`
+	CategoryID int64 `form:"category_id" binding:"required,min=1"`
+}
+
+// listPostsByCategory  lists posts from the given category
+func (server *Server) listPostsByCategory(ctx *gin.Context) {
+	var request listPostsByCategoryRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.ListPostsByCategoryParams{
+		ID:     request.CategoryID,
+		Limit:  request.PageSize,
+		Offset: (request.Page - 1) * request.PageSize,
+	}
+
+	posts, err := server.store.ListPostsByCategory(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if len(posts) == 0 {
+		err := errors.New("no posts found in the given category")
+		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, posts)
+}
