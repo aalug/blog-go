@@ -41,5 +41,8 @@
 - `/posts` - handles POST requests to create posts
 - `/posts/{id}` - handles DELETE requests to delete a post
 - `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
-- `/posts/all` - handles GET requests to list all posts
+- `/posts/all` - handles GET requests to list all posts. Query params: `page`, `page_size`
+- `/posts/author` - handles GET requests to list all posts created by author 
+with given name (that username or email contain given string). 
+Query params: `page`, `page_size`, `author`
 

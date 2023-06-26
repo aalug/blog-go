@@ -859,6 +859,186 @@ func TestListPostsAPI(t *testing.T) {
 	}
 }
 
+func TestListPostsByAuthorAPI(t *testing.T) {
+	n := 10
+	authorName := "testAuthor"
+	postsByAuthor := make([]db.ListPostsByAuthorRow, n/2)
+	allPosts := make([]db.ListPostsByAuthorRow, n)
+	for i := 0; i < n; i++ {
+		post := db.ListPostsByAuthorRow{
+			Title:          utils.RandomString(5),
+			Description:    utils.RandomString(5),
+			AuthorUsername: utils.RandomString(5),
+			CategoryName:   utils.RandomString(5),
+			Image:          utils.RandomString(5) + "jpg",
+			CreatedAt:      time.Now(),
+		}
+		if i%2 == 0 {
+			post.AuthorUsername = authorName
+			postsByAuthor[i/2] = post
+		}
+		allPosts[i] = post
+	}
+
+	users := make([]db.User, 1)
+	users[0] = db.User{
+		ID:             1,
+		Username:       authorName,
+		Email:          utils.RandomEmail(),
+		HashedPassword: utils.RandomString(5),
+	}
+
+	type Query struct {
+		page     int
+		pageSize int
+		author   string
+	}
+
+	testCases := []struct {
+		name          string
+		query         Query
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			query: Query{
+				page:     1,
+				pageSize: n,
+				author:   authorName,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListUsersContainingString(gomock.Any(), authorName).
+					Times(1).
+					Return(users, nil)
+				params := db.ListPostsByAuthorParams{
+					Limit:    int32(n),
+					Offset:   0,
+					AuthorID: int32(users[0].ID),
+				}
+				store.EXPECT().
+					ListPostsByAuthor(gomock.Any(), params).
+					Times(1).
+					Return(postsByAuthor, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchPosts(t, recorder.Body, postsByAuthor)
+			},
+		},
+		{
+			name: "Internal Server Error ListPostsByAuthor",
+			query: Query{
+				page:     1,
+				pageSize: n,
+				author:   authorName,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListUsersContainingString(gomock.Any(), authorName).
+					Times(1).
+					Return(users, nil)
+				store.EXPECT().
+					ListPostsByAuthor(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.ListPostsByAuthorRow{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Internal Server Error ListUsersContainingString",
+			query: Query{
+				page:     1,
+				pageSize: n,
+				author:   authorName,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListUsersContainingString(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.User{}, sql.ErrConnDone)
+				store.EXPECT().
+					ListPostsByAuthor(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "Invalid Page Size",
+			query: Query{
+				page:     1,
+				pageSize: 99,
+				author:   authorName,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListUsersContainingString(gomock.Any(), gomock.Any()).
+					Times(0)
+				store.EXPECT().
+					ListPostsByAuthor(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "Not Found",
+			query: Query{
+				page:     1,
+				pageSize: n,
+				author:   "notFound",
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListUsersContainingString(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.User{}, nil)
+				store.EXPECT().
+					ListPostsByAuthor(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := "/posts/author"
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			// Add query params
+			q := req.URL.Query()
+			q.Add("page", fmt.Sprintf("%d", tc.query.page))
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
+			q.Add("author", tc.query.author)
+			req.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 // generateRandomCategoryPostAndTags generates random category, post and tags
 func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []string) {
 	category := db.Category{
@@ -885,21 +1065,38 @@ func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []st
 	return category, post, tags
 }
 
-// requireBodyMatchPosts  checks if the body of the response matches the posts
-func requireBodyMatchPosts(t *testing.T, body *bytes.Buffer, posts []db.ListPostsRow) {
+func requireBodyMatchPosts(t *testing.T, body *bytes.Buffer, posts interface{}) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var gotPosts []db.ListPostsRow
-	err = json.Unmarshal(data, &gotPosts)
-	require.NoError(t, err)
+	switch p := posts.(type) {
+	case []db.ListPostsRow:
+		var gotPosts []db.ListPostsRow
+		err = json.Unmarshal(data, &gotPosts)
+		require.NoError(t, err)
 
-	for i := 0; i < len(posts); i++ {
-		require.Equal(t, posts[i].Title, gotPosts[i].Title)
-		require.Equal(t, posts[i].Description, gotPosts[i].Description)
-		require.Equal(t, posts[i].AuthorUsername, gotPosts[i].AuthorUsername)
-		require.Equal(t, posts[i].CategoryName, gotPosts[i].CategoryName)
-		require.Equal(t, posts[i].Image, gotPosts[i].Image)
-		require.WithinDuration(t, posts[i].CreatedAt, gotPosts[i].CreatedAt, time.Second)
+		for i := 0; i < len(p); i++ {
+			require.Equal(t, p[i].Title, gotPosts[i].Title)
+			require.Equal(t, p[i].Description, gotPosts[i].Description)
+			require.Equal(t, p[i].AuthorUsername, gotPosts[i].AuthorUsername)
+			require.Equal(t, p[i].CategoryName, gotPosts[i].CategoryName)
+			require.Equal(t, p[i].Image, gotPosts[i].Image)
+			require.WithinDuration(t, p[i].CreatedAt, gotPosts[i].CreatedAt, time.Second)
+		}
+	case []db.ListPostsByAuthorRow:
+		var gotPosts []db.ListPostsByAuthorRow
+		err = json.Unmarshal(data, &gotPosts)
+		require.NoError(t, err)
+
+		for i := 0; i < len(p); i++ {
+			require.Equal(t, p[i].Title, gotPosts[i].Title)
+			require.Equal(t, p[i].Description, gotPosts[i].Description)
+			require.Equal(t, p[i].AuthorUsername, gotPosts[i].AuthorUsername)
+			require.Equal(t, p[i].CategoryName, gotPosts[i].CategoryName)
+			require.Equal(t, p[i].Image, gotPosts[i].Image)
+			require.WithinDuration(t, p[i].CreatedAt, gotPosts[i].CreatedAt, time.Second)
+		}
+	default:
+		t.Fatalf("unsupported type %T", posts)
 	}
 }

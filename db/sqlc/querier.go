@@ -37,6 +37,7 @@ type Querier interface {
 	ListPostsByTags(ctx context.Context, arg ListPostsByTagsParams) ([]ListPostsByTagsRow, error)
 	ListTagIDsByNames(ctx context.Context, tagNames []string) ([]int32, error)
 	ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, error)
+	ListUsersContainingString(ctx context.Context, str string) ([]User, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateComment(ctx context.Context, arg UpdateCommentParams) (Comment, error)
 	UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error)
