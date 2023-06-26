@@ -11,5 +11,12 @@ WHERE email = $1
 LIMIT 1;
 
 -- name: DeleteUser :exec
-DELETE FROM users
+DELETE
+FROM users
 WHERE email = $1;
+
+-- name: ListUsersContainingString :many
+SELECT *
+FROM users
+WHERE username ILIKE '%' || @str::text || '%'
+   OR email ILIKE '%' || @str::text || '%';

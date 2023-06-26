@@ -62,3 +62,23 @@ func TestQueries_DeleteUser(t *testing.T) {
 	require.EqualError(t, err, sql.ErrNoRows.Error())
 	require.Empty(t, user2)
 }
+
+func TestQueries_ListUsersContainingString(t *testing.T) {
+	tme := time.Now().Format("20060102150405")
+	for i := 0; i < 10; i++ {
+		params := CreateUserParams{
+			Username:       utils.RandomString(3),
+			HashedPassword: utils.RandomString(6),
+			Email:          utils.RandomEmail(),
+		}
+		if i%2 == 0 {
+			params.Username = tme + utils.RandomString(10)
+		}
+		_, err := testQueries.CreateUser(context.Background(), params)
+		require.NoError(t, err)
+	}
+
+	users, err := testQueries.ListUsersContainingString(context.Background(), tme)
+	require.NoError(t, err)
+	require.Len(t, users, 5)
+}

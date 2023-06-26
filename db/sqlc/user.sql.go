@@ -37,7 +37,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users
+DELETE
+FROM users
 WHERE email = $1
 `
 
@@ -65,4 +66,41 @@ func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listUsersContainingString = `-- name: ListUsersContainingString :many
+SELECT id, username, email, hashed_password, password_changed_at, created_at
+FROM users
+WHERE username ILIKE '%' || $1::text || '%'
+   OR email ILIKE '%' || $1::text || '%'
+`
+
+func (q *Queries) ListUsersContainingString(ctx context.Context, str string) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsersContainingString, str)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.HashedPassword,
+			&i.PasswordChangedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

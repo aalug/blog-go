@@ -269,3 +269,59 @@ func (server *Server) listPosts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, posts)
 }
+
+type listPostsByAuthorRequest struct {
+	Page     int32  `form:"page" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=5,max=15"`
+	Author   string `form:"author" binding:"required"`
+}
+
+// listPostsByAuthor lists all posts created by user with username or email
+// containing the string in the request
+func (server *Server) listPostsByAuthor(ctx *gin.Context) {
+	var request listPostsByAuthorRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// get all authors containing the string in the request
+	authors, err := server.store.ListUsersContainingString(ctx, request.Author)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// check if any authors were found
+	if len(authors) == 0 {
+		err := errors.New("no users found")
+		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		return
+	}
+
+	authorIDs := make([]int32, len(authors))
+	for i, author := range authors {
+		authorIDs[i] = int32(author.ID)
+	}
+
+	var allPosts []db.ListPostsByAuthorRow
+
+	// get posts by author
+	for _, authorID := range authorIDs {
+		params := db.ListPostsByAuthorParams{
+			AuthorID: authorID,
+			Limit:    request.PageSize,
+			Offset:   (request.Page - 1) * request.PageSize,
+		}
+
+		posts, err := server.store.ListPostsByAuthor(ctx, params)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		allPosts = append(allPosts, posts...)
+	}
+
+	ctx.JSON(http.StatusOK, allPosts)
+}
