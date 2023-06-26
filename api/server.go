@@ -57,6 +57,7 @@ func (server *Server) setupRouter() {
 	// --- posts ---
 	router.GET("/posts/id/:id", server.getPostByID)
 	router.GET("/posts/title/:slug", server.getPostByTitle)
+	router.GET("/posts/all", server.listPosts)
 
 	// ===== routes that require authentication =====
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))

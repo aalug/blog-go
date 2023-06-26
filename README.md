@@ -41,4 +41,5 @@
 - `/posts` - handles POST requests to create posts
 - `/posts/{id}` - handles DELETE requests to delete a post
 - `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
+- `/posts/all` - handles GET requests to list all posts
 
