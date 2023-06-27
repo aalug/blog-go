@@ -8,6 +8,7 @@ import (
 type Store interface {
 	Querier
 	AddTagsToPost(ctx context.Context, params AddTagsToPostParams) error
+	RemoveAllTagsFromPost(ctx context.Context, params int64) error
 	RemoveTagsFromPost(ctx context.Context, params RemoveTagsFromPostParams) error
 }
 
@@ -51,24 +52,42 @@ func (store SQLStore) AddTagsToPost(ctx context.Context, arg AddTagsToPostParams
 	return nil
 }
 
+// RemoveAllTagsFromPost removes all tags from a post. For each tag, checks if it's used by a different post, if not - deletes the tag and post_tags table,
+// if it is used be another post - just deletes the post_tags table
+func (store SQLStore) RemoveAllTagsFromPost(ctx context.Context, postID int64) error {
+	tags, err := store.GetTagsOfPost(ctx, postID)
+	if err != nil {
+		return err
+	}
+	tagIDs := getTagIDs(tags)
+	if err != nil {
+		return err
+	}
+
+	params := DeleteTagsFromPostParams{
+		PostID: int32(postID),
+		TagIds: tagIDs,
+	}
+
+	err = store.DeleteTagsFromPost(ctx, params)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type RemoveTagsFromPostParams struct {
 	PostID int64
 	Tags   []string
 }
 
-// RemoveTagsFromPost for each tag, checks if it's used by a different post, if not - deletes the tag and post_tags table,
+// RemoveTagsFromPost removes given tags from a post. For each tag, checks if it's used by a different post, if not - deletes the tag and post_tags table,
 // if it is used be another post - just deletes the post_tags table
 func (store SQLStore) RemoveTagsFromPost(ctx context.Context, arg RemoveTagsFromPostParams) error {
-	tags, err := store.GetTagsOfPost(ctx, arg.PostID)
+	tagIDs, err := store.ListTagIDsByNames(ctx, arg.Tags)
 	if err != nil {
 		return err
 	}
-	tagIDs := getTagIDs(tags)
-	tagIDsFromArg, err := store.ListTagIDsByNames(ctx, arg.Tags)
-	if err != nil {
-		return err
-	}
-	tagIDs = append(tagIDs, tagIDsFromArg...)
 
 	params := DeleteTagsFromPostParams{
 		PostID: int32(arg.PostID),
