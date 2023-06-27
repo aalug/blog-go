@@ -47,4 +47,8 @@ with given name (that username or email contain given string).
 Query params: `page`, `page_size`, `author`
 - `/posts/category` - handles GET requests to list posts from the given category.
 Query params: `page`, `page_size`, `category_id`
+- `/posts/tags` - handles GET requests to list posts with given tags.
+Query params: `page`, `page_size`, `tag_ids` where `tag_ids` is 
+comma-separated int format (e.g. `&tag_ids=1,2,3`)
+- `/posts/{id}` - handles PATCH requests to update the post.
 

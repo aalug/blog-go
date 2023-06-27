@@ -78,6 +78,7 @@ func (server *Server) setupRouter() {
 	// --- posts ---
 	authRoutes.POST("/posts", server.createPost)
 	authRoutes.DELETE("/posts/:id", server.deletePost)
+	authRoutes.PATCH("/posts/:id", server.updatePost)
 
 	server.router = router
 }

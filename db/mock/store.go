@@ -476,6 +476,20 @@ func (mr *MockStoreMockRecorder) ListUsersContainingString(arg0, arg1 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsersContainingString", reflect.TypeOf((*MockStore)(nil).ListUsersContainingString), arg0, arg1)
 }
 
+// RemoveAllTagsFromPost mocks base method.
+func (m *MockStore) RemoveAllTagsFromPost(arg0 context.Context, arg1 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveAllTagsFromPost", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveAllTagsFromPost indicates an expected call of RemoveAllTagsFromPost.
+func (mr *MockStoreMockRecorder) RemoveAllTagsFromPost(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAllTagsFromPost", reflect.TypeOf((*MockStore)(nil).RemoveAllTagsFromPost), arg0, arg1)
+}
+
 // RemoveTagsFromPost mocks base method.
 func (m *MockStore) RemoveTagsFromPost(arg0 context.Context, arg1 db.RemoveTagsFromPostParams) error {
 	m.ctrl.T.Helper()

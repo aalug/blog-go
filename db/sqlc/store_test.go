@@ -10,7 +10,7 @@ import (
 // and the RemoveTagsFromPost methods
 func TestSQLStore_AddAndRemoveTagsToPost(t *testing.T) {
 	post := createRandomPost(t)
-	tags := []string{"tag1", "tag2"}
+	tags := []string{"tag1", "tag2", "tag3"}
 
 	params := AddTagsToPostParams{
 		PostID: post.ID,
@@ -30,10 +30,16 @@ func TestSQLStore_AddAndRemoveTagsToPost(t *testing.T) {
 	// RemoveTagsFromPost
 	removeParams := RemoveTagsFromPostParams{
 		PostID: post.ID,
-		Tags:   tags,
+		Tags:   []string{postTags[0].Name},
 	}
 
 	err = testStore.RemoveTagsFromPost(context.Background(), removeParams)
+	require.NoError(t, err)
+	postTags, err = testQueries.GetTagsOfPost(context.Background(), post.ID)
+	require.NoError(t, err)
+	require.Equal(t, len(tags)-1, len(postTags))
+
+	err = testStore.RemoveAllTagsFromPost(context.Background(), post.ID)
 	require.NoError(t, err)
 	postTags, err = testQueries.GetTagsOfPost(context.Background(), post.ID)
 	require.NoError(t, err)

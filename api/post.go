@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type createPostRequest struct {
@@ -129,7 +130,7 @@ func (server *Server) deletePost(ctx *gin.Context) {
 		return
 	}
 
-	err = server.store.DeletePost(ctx, int64(request.ID))
+	err = server.store.DeletePost(ctx, request.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -404,4 +405,185 @@ func (server *Server) listPostsByTags(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, posts)
+}
+
+type updatePostUriRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+type updatePostRequest struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Content     string   `json:"content"`
+	Tags        []string `json:"tags"`
+	Category    string   `json:"category"`
+	Image       string   `json:"image"`
+}
+
+type updatePostResponse struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Content     string   `json:"content"`
+	Category    string   `json:"category"`
+	Tags        []string `json:"tags"`
+	Image       string   `json:"image"`
+}
+
+// updatePost updates a post with provided details
+func (server *Server) updatePost(ctx *gin.Context) {
+	var uriRequest updatePostUriRequest
+	if err := ctx.ShouldBindUri(&uriRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authUser, err := server.store.GetUser(ctx, authPayload.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// check if the user making the request is the author of the post
+	p, err := server.store.GetMinimalPostData(ctx, uriRequest.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if p.AuthorID != int32(authUser.ID) {
+		err := errors.New("post does not belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	var request updatePostRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	if request.Title == "" &&
+		request.Description == "" &&
+		request.Content == "" &&
+		len(request.Tags) == 0 &&
+		request.Category == "" &&
+		request.Image == "" {
+		err := errors.New("no fields to update")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	post, err := server.store.GetPostByID(ctx, uriRequest.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	var categoryName string
+	if request.Category != "" {
+		categoryName = request.Category
+	} else {
+		categoryName = post.CategoryName
+	}
+	categoryID, err := server.store.GetOrCreateCategory(ctx, categoryName)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	params := db.UpdatePostParams{
+		ID: uriRequest.ID,
+		Title: func() string {
+			if request.Title == "" {
+				return post.Title
+			}
+			return request.Title
+		}(),
+		Description: func() string {
+			if request.Description == "" {
+				return post.Description
+			}
+			return request.Description
+		}(),
+		Content: func() string {
+			if request.Content == "" {
+				return post.Content
+			}
+			return request.Content
+		}(),
+		CategoryID: int32(categoryID),
+		Image: func() string {
+			if request.Image == "" {
+				return post.Image
+			}
+			return request.Image
+		}(),
+		UpdatedAt: time.Now(),
+	}
+
+	updatedPost, err := server.store.UpdatePost(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if len(request.Tags) > 0 {
+		postTags, err := server.store.GetTagsOfPost(ctx, uriRequest.ID)
+		postTagNames := make([]string, len(postTags))
+		for i, postTag := range postTags {
+			postTagNames[i] = postTag.Name
+		}
+
+		// s1 - tags that are in post but not in request - should be removed
+		// s2 - tags that are in request but not in post - should be added
+		s1, s2 := utils.CompareTagLists(postTagNames, request.Tags)
+
+		if len(s2) > 0 {
+			paramsToAdd := db.AddTagsToPostParams{
+				PostID: uriRequest.ID,
+				Tags:   s2,
+			}
+			err = server.store.AddTagsToPost(ctx, paramsToAdd)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+		}
+		if len(s1) > 0 {
+			paramsToRemove := db.RemoveTagsFromPostParams{
+				PostID: uriRequest.ID,
+				Tags:   s1,
+			}
+			err = server.store.RemoveTagsFromPost(ctx, paramsToRemove)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+		}
+	}
+
+	tags, err := server.store.GetTagsOfPost(ctx, uriRequest.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	tagsAfterUpdate := make([]string, len(tags))
+	for i, tag := range tags {
+		tagsAfterUpdate[i] = tag.Name
+	}
+
+	res := updatePostResponse{
+		Title:       updatedPost.Title,
+		Description: updatedPost.Description,
+		Content:     updatedPost.Content,
+		Category:    categoryName,
+		Tags:        tagsAfterUpdate,
+		Image:       updatedPost.Image,
+	}
+
+	ctx.JSON(http.StatusOK, res)
 }
