@@ -166,3 +166,42 @@ func (server *Server) updateComment(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, updatedComment)
 }
+
+type listCommentsUriRequest struct {
+	PostID int32 `uri:"post_id" binding:"required,min=1"`
+}
+
+type listCommentsRequest struct {
+	Page     int32 `form:"page" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=15"`
+}
+
+// listComments lists comments for a post.
+// Get the post ID from the URI and the pagination parameters from the query parameters.
+func (server *Server) listComments(ctx *gin.Context) {
+	var uriRequest listCommentsUriRequest
+	if err := ctx.ShouldBindUri(&uriRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	var request listCommentsRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.ListCommentsForPostParams{
+		PostID: uriRequest.PostID,
+		Limit:  request.PageSize,
+		Offset: (request.Page - 1) * request.PageSize,
+	}
+
+	comments, err := server.store.ListCommentsForPost(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, comments)
+}

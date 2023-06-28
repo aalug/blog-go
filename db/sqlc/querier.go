@@ -31,7 +31,7 @@ type Querier interface {
 	GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)
-	ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]Comment, error)
+	ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]ListCommentsForPostRow, error)
 	ListPosts(ctx context.Context, arg ListPostsParams) ([]ListPostsRow, error)
 	ListPostsByAuthor(ctx context.Context, arg ListPostsByAuthorParams) ([]ListPostsByAuthorRow, error)
 	ListPostsByCategory(ctx context.Context, arg ListPostsByCategoryParams) ([]ListPostsByCategoryRow, error)

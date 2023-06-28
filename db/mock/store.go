@@ -372,10 +372,10 @@ func (mr *MockStoreMockRecorder) ListCategories(arg0, arg1 interface{}) *gomock.
 }
 
 // ListCommentsForPost mocks base method.
-func (m *MockStore) ListCommentsForPost(arg0 context.Context, arg1 db.ListCommentsForPostParams) ([]db.Comment, error) {
+func (m *MockStore) ListCommentsForPost(arg0 context.Context, arg1 db.ListCommentsForPostParams) ([]db.ListCommentsForPostRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCommentsForPost", arg0, arg1)
-	ret0, _ := ret[0].([]db.Comment)
+	ret0, _ := ret[0].([]db.ListCommentsForPostRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
