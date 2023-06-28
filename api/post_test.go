@@ -476,7 +476,7 @@ func TestDeletePostAPI(t *testing.T) {
 			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/posts/%d", tc.postID)
+			url := fmt.Sprintf("/posts/delete/%d", tc.postID)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)
 
@@ -1324,6 +1324,499 @@ func TestListPostsByTagsAPI(t *testing.T) {
 	}
 }
 
+func TestUpdatePostAPI(t *testing.T) {
+	randomUser, _ := generateRandomUser(t)
+	category, post, _ := generateRandomCategoryPostAndTags(int32(randomUser.ID))
+	getPostByIdRow := db.GetPostByIDRow{
+		ID:             post.ID,
+		Title:          post.Title,
+		Description:    post.Description,
+		Content:        post.Content,
+		AuthorUsername: randomUser.Username,
+		CategoryName:   category.Name,
+		Image:          post.Image,
+		CreatedAt:      time.Now(),
+	}
+	testCases := []struct {
+		name          string
+		postID        int64
+		body          gin.H
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:   "OK",
+			postID: post.ID,
+			body: gin.H{
+				"title":       "new title",
+				"description": "new description",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).AnyTimes().Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					AnyTimes().
+					Return(db.GetMinimalPostDataRow{ID: post.ID, AuthorID: int32(randomUser.ID)}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Eq(post.ID)).AnyTimes().Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).AnyTimes().Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).AnyTimes().Return(post, nil)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Eq(post.ID)).AnyTimes().Return([]db.Tag{}, nil)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Eq(post.ID)).AnyTimes().Return([]db.Tag{}, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchUpdatedPost(t, recorder.Body, post)
+			},
+		},
+		{
+			name:   "Invalid Post ID",
+			postID: 0,
+			body: gin.H{
+				"title":       "new title",
+				"description": "new description",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetMinimalPostData(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Empty Body",
+			postID: post.ID,
+			body:   gin.H{},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).AnyTimes().Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					AnyTimes().
+					Return(db.GetMinimalPostDataRow{ID: post.ID, AuthorID: int32(randomUser.ID)}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Unauthorized User",
+			postID: post.ID,
+			body: gin.H{
+				"title":       "new title",
+				"description": "new description",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, "unauthorized@example.com", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq("unauthorized@example.com")).
+					AnyTimes().
+					Return(db.User{
+						ID:             999,
+						Username:       "unauthorized",
+						Email:          "unauthorized@example.com",
+						HashedPassword: "unauthorized",
+					}, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					AnyTimes().
+					Return(db.GetMinimalPostDataRow{ID: post.ID, AuthorID: int32(randomUser.ID)}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetUser",
+			postID: post.ID,
+			body: gin.H{
+				"title":    "new title",
+				"category": "newCategory",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).
+					Times(1).
+					Return(db.User{}, sql.ErrConnDone)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).Times(0)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetPostByID",
+			postID: post.ID,
+			body: gin.H{
+				"title":    "new title",
+				"category": "newCategory",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).
+					Times(1).
+					Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetPostByIDRow{}, sql.ErrConnDone)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetOrCreateCategory",
+			postID: post.ID,
+			body: gin.H{
+				"title":    "new title",
+				"category": "newCategory",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).
+					Times(1).
+					Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(int64(0), sql.ErrConnDone)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetMinimalPostData",
+			postID: post.ID,
+			body: gin.H{
+				"title":    "new title",
+				"category": "newCategory",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).
+					Times(1).
+					Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{}, sql.ErrConnDone)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error UpdatePost",
+			postID: post.ID,
+			body: gin.H{
+				"category": "newCategory",
+				"content":  "new content",
+				"image":    "test.jpg",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).
+					Times(1).
+					Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Post{}, sql.ErrConnDone)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error GetTagsOfPost1",
+			postID: post.ID,
+			body: gin.H{
+				"title":    "new title",
+				"category": "newCategory",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).Times(1).Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(1).Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(1).Return(post, nil)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Tag{}, sql.ErrConnDone)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error AddTagsToPost",
+			postID: post.ID,
+			body: gin.H{
+				"title": "new title",
+				"tags":  []string{"tag1", "tag2"},
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).Times(1).Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(1).Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(1).Return(post, nil)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(1).Return([]db.Tag{}, nil)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(sql.ErrConnDone)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error RemoveTagsFromPost",
+			postID: post.ID,
+			body: gin.H{
+				"title": "new title",
+				"tags":  []string{"tag1", "tag2"},
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).Times(1).Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(1).Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(1).Return(post, nil)
+				// must return tags so that the RemoveTagsFromPost is called
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Tag{
+						{ID: 11, Name: "tag11"},
+					}, nil)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(sql.ErrConnDone)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error RemoveTagsFromPost",
+			postID: post.ID,
+			body: gin.H{
+				"title": "new title",
+				"tags":  []string{"tag1", "tag2"},
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).Times(1).Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{
+						ID:       post.ID,
+						AuthorID: int32(randomUser.ID),
+					}, nil)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(1).Return(getPostByIdRow, nil)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(1).Return(category.ID, nil)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(1).Return(post, nil)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(1).Return([]db.Tag{}, nil)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Eq(post.ID)).Times(1).Return([]db.Tag{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:   "Not Found",
+			postID: post.ID,
+			body: gin.H{
+				"title": "new title",
+			},
+			setupAuth: func(t *testing.T, r *http.Request, maker token.Maker) {
+				addAuthorization(t, r, maker, authorizationTypeBearer, randomUser.Email, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(randomUser.Email)).Times(1).Return(randomUser, nil)
+				store.EXPECT().
+					GetMinimalPostData(gomock.Any(), gomock.Eq(post.ID)).
+					Times(1).
+					Return(db.GetMinimalPostDataRow{}, sql.ErrNoRows)
+				store.EXPECT().GetPostByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetOrCreateCategory(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().UpdatePost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().AddTagsToPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().RemoveTagsFromPost(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().GetTagsOfPost(gomock.Any(), gomock.Any()).Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			data, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			url := fmt.Sprintf("/posts/update/%d", tc.postID)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			tc.setupAuth(t, req, server.tokenMaker)
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 // generateRandomCategoryPostAndTags generates random category, post and tags
 func generateRandomCategoryPostAndTags(userID int32) (db.Category, db.Post, []string) {
 	category := db.Category{
@@ -1410,4 +1903,18 @@ func requireBodyMatchPosts(t *testing.T, body *bytes.Buffer, posts interface{}) 
 	default:
 		t.Fatalf("unsupported type %T", posts)
 	}
+}
+
+func requireBodyMatchUpdatedPost(t *testing.T, body *bytes.Buffer, post db.Post) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var gotPost db.Post
+	err = json.Unmarshal(data, &gotPost)
+	require.NoError(t, err)
+
+	require.Equal(t, post.Title, gotPost.Title)
+	require.Equal(t, post.Description, gotPost.Description)
+	require.Equal(t, post.Content, gotPost.Content)
+	require.Equal(t, post.Image, gotPost.Image)
 }
