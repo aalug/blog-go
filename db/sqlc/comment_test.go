@@ -65,8 +65,8 @@ func TestQueries_ListCommentsForPost(t *testing.T) {
 		require.NotEmpty(t, comment)
 		require.NotZero(t, comment.ID)
 		require.NotZero(t, comment.CreatedAt)
-		require.Equal(t, int64(comment.PostID), post.ID)
 		require.Equal(t, int64(comment.UserID), user.ID)
+		require.Equal(t, comment.Username, user.Username)
 		require.NotEmpty(t, comment.Content)
 	}
 }

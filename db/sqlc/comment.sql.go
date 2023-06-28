@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const createComment = `-- name: CreateComment :one
@@ -65,10 +66,11 @@ func (q *Queries) GetComment(ctx context.Context, id int64) (GetCommentRow, erro
 }
 
 const listCommentsForPost = `-- name: ListCommentsForPost :many
-SELECT id, content, user_id, post_id, created_at
-FROM "comments"
-WHERE post_id = $1
-ORDER BY created_at DESC
+SELECT c.id, c.content, c.user_id, u.username, c.created_at
+FROM "comments" c
+         JOIN "users" u ON c.user_id = u.id
+WHERE c.post_id = $1
+ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -78,20 +80,28 @@ type ListCommentsForPostParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]Comment, error) {
+type ListCommentsForPostRow struct {
+	ID        int64     `json:"id"`
+	Content   string    `json:"content"`
+	UserID    int32     `json:"user_id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) ListCommentsForPost(ctx context.Context, arg ListCommentsForPostParams) ([]ListCommentsForPostRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCommentsForPost, arg.PostID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Comment{}
+	items := []ListCommentsForPostRow{}
 	for rows.Next() {
-		var i Comment
+		var i ListCommentsForPostRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Content,
 			&i.UserID,
-			&i.PostID,
+			&i.Username,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

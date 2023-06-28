@@ -67,6 +67,9 @@ func (server *Server) setupRouter() {
 	router.GET("/posts/category", server.listPostsByCategory)
 	router.GET("/posts/tags", server.listPostsByTags)
 
+	// --- comments ---
+	router.GET("/comments/:post_id", server.listComments)
+
 	// ===== routes that require authentication =====
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 

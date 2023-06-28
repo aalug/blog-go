@@ -38,22 +38,23 @@
  - `/category/{name}` - handles DELETE requests to delete a category
 
 ### Posts
-- `/posts` - handles POST requests to create posts
-- `/posts/{id}` - handles DELETE requests to delete a post
-- `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
-- `/posts/all` - handles GET requests to list all posts. Query params: `page`, `page_size`
+- `/posts` - handles POST requests to create posts.
+- `/posts/{id}` - handles DELETE requests to delete a post.
+- `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details.
+- `/posts/all` - handles GET requests to list all posts. Query params: `page`, `page_size`.
 - `/posts/author` - handles GET requests to list posts created by author 
 with given name (that username or email contain given string). 
-Query params: `page`, `page_size`, `author`
+Query params: `page`, `page_size`, `author`.
 - `/posts/category` - handles GET requests to list posts from the given category.
-Query params: `page`, `page_size`, `category_id`
+Query params: `page`, `page_size`, `category_id`.
 - `/posts/tags` - handles GET requests to list posts with given tags.
 Query params: `page`, `page_size`, `tag_ids` where `tag_ids` is 
-comma-separated int format (e.g. `&tag_ids=1,2,3`)
+comma-separated int format (e.g. `&tag_ids=1,2,3`).
 - `/posts/{id}` - handles PATCH requests to update the post.
 
 ### Comments
 - `/comments` - handles POST requests to create a comment.
 - `/comments/{id}` - handles DELETE requests to delete a comment.
 - `/comments/{id}` - handles PATCH requests to update a comment.
-
+- `/comments/{post_id}` - handles GET requests to list comments of a post.
+Query params: `page` and `page_size`.

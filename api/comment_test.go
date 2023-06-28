@@ -677,6 +677,152 @@ func TestUpdateCommentAPI(t *testing.T) {
 	}
 }
 
+func TestListCommentsAPI(t *testing.T) {
+	n := 10
+	randomUser, _ := generateRandomUser(t)
+	_, post, _ := generateRandomCategoryPostAndTags(int32(randomUser.ID))
+	comments := make([]db.ListCommentsForPostRow, n)
+
+	for i := 0; i < n; i++ {
+		comment := db.ListCommentsForPostRow{
+			ID:       int64(i),
+			Content:  utils.RandomString(6),
+			UserID:   int32(randomUser.ID),
+			Username: randomUser.Username,
+		}
+		comments[i] = comment
+	}
+
+	type Query struct {
+		page     int
+		pageSize int
+	}
+
+	testCases := []struct {
+		name          string
+		postID        int64
+		query         Query
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:   "OK",
+			postID: post.ID,
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				params := db.ListCommentsForPostParams{
+					PostID: int32(post.ID),
+					Limit:  int32(n),
+					Offset: 0,
+				}
+				store.EXPECT().
+					ListCommentsForPost(gomock.Any(), gomock.Eq(params)).
+					Times(1).
+					Return(comments, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name:   "Invalid Post ID",
+			postID: 0,
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCommentsForPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Invalid Page Size",
+			postID: post.ID,
+			query: Query{
+				page:     1,
+				pageSize: 99,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCommentsForPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Invalid Page",
+			postID: post.ID,
+			query: Query{
+				page:     0,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCommentsForPost(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:   "Internal Server Error",
+			postID: post.ID,
+			query: Query{
+				page:     1,
+				pageSize: n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListCommentsForPost(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.ListCommentsForPostRow{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/comments/%d", tc.postID)
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			// Add query params
+			q := req.URL.Query()
+			q.Add("page", fmt.Sprintf("%d", tc.query.page))
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
+			req.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, req)
+
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
 func requireBodyMatchComment(t *testing.T, body *bytes.Buffer, comment db.Comment) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)

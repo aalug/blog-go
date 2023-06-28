@@ -5,10 +5,11 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: ListCommentsForPost :many
-SELECT *
-FROM "comments"
-WHERE post_id = $1
-ORDER BY created_at DESC
+SELECT c.id, c.content, c.user_id, u.username, c.created_at
+FROM "comments" c
+         JOIN "users" u ON c.user_id = u.id
+WHERE c.post_id = $1
+ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: UpdateComment :one
