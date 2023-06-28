@@ -77,8 +77,8 @@ func (server *Server) setupRouter() {
 
 	// --- posts ---
 	authRoutes.POST("/posts", server.createPost)
-	authRoutes.DELETE("/posts/:id", server.deletePost)
-	authRoutes.PATCH("/posts/:id", server.updatePost)
+	authRoutes.DELETE("/posts/delete/:id", server.deletePost)
+	authRoutes.PATCH("/posts/update/:id", server.updatePost)
 
 	// --- comments ---
 	authRoutes.POST("/comments", server.createComment)
