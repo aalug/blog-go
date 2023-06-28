@@ -21,3 +21,8 @@ RETURNING *;
 DELETE
 FROM "comments"
 WHERE id = $1;
+
+-- name: GetComment :one
+SELECT id, user_id
+FROM "comments"
+WHERE id = $1;

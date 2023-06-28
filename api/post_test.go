@@ -476,7 +476,7 @@ func TestDeletePostAPI(t *testing.T) {
 			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/posts/delete/%d", tc.postID)
+			url := fmt.Sprintf("/posts/%d", tc.postID)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)
 
@@ -1804,7 +1804,7 @@ func TestUpdatePostAPI(t *testing.T) {
 			data, err := json.Marshal(tc.body)
 			require.NoError(t, err)
 
-			url := fmt.Sprintf("/posts/update/%d", tc.postID)
+			url := fmt.Sprintf("/posts/%d", tc.postID)
 			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(data))
 			require.NoError(t, err)
 

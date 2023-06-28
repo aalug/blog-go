@@ -97,3 +97,14 @@ func TestQueries_UpdateComment(t *testing.T) {
 	require.Equal(t, updatedComment.PostID, comment.PostID)
 	require.NotZero(t, updatedComment.CreatedAt)
 }
+
+// TestQueries_GetComment tests the get comment function
+func TestQueries_GetComment(t *testing.T) {
+	comment := createRandomComment(t)
+
+	comment2, err := testQueries.GetComment(context.Background(), comment.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, comment2)
+	require.Equal(t, comment2.ID, comment.ID)
+	require.Equal(t, comment2.UserID, comment.UserID)
+}
