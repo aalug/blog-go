@@ -102,3 +102,67 @@ func (server *Server) deleteComment(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusNoContent, nil)
 }
+
+type updateCommentUriRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+type updateCommentRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+// updateComment updates a comment. Checks if the authenticated user
+// is the author of the comment, and if so, updates the comment.
+func (server *Server) updateComment(ctx *gin.Context) {
+	var uriRequest updateCommentUriRequest
+	if err := ctx.ShouldBindUri(&uriRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// get the comment id to check if it exists and
+	// to check if the authenticated user is the author
+	comment, err := server.store.GetComment(ctx, uriRequest.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authUser, err := server.store.GetUser(ctx, authPayload.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// check if the authenticated user is the author
+	if comment.UserID != int32(authUser.ID) {
+		err := errors.New("comment does not belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	var request updateCommentRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	params := db.UpdateCommentParams{
+		ID:      uriRequest.ID,
+		Content: request.Content,
+	}
+
+	updatedComment, err := server.store.UpdateComment(ctx, params)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, updatedComment)
+}

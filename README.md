@@ -55,4 +55,5 @@ comma-separated int format (e.g. `&tag_ids=1,2,3`)
 ### Comments
 - `/comments` - handles POST requests to create a comment.
 - `/comments/{id}` - handles DELETE requests to delete a comment.
+- `/comments/{id}` - handles PATCH requests to update a comment.
 
