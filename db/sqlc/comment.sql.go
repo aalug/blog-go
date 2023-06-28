@@ -46,6 +46,24 @@ func (q *Queries) DeleteComment(ctx context.Context, id int64) error {
 	return err
 }
 
+const getComment = `-- name: GetComment :one
+SELECT id, user_id
+FROM "comments"
+WHERE id = $1
+`
+
+type GetCommentRow struct {
+	ID     int64 `json:"id"`
+	UserID int32 `json:"user_id"`
+}
+
+func (q *Queries) GetComment(ctx context.Context, id int64) (GetCommentRow, error) {
+	row := q.db.QueryRowContext(ctx, getComment, id)
+	var i GetCommentRow
+	err := row.Scan(&i.ID, &i.UserID)
+	return i, err
+}
+
 const listCommentsForPost = `-- name: ListCommentsForPost :many
 SELECT id, content, user_id, post_id, created_at
 FROM "comments"

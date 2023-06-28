@@ -39,7 +39,7 @@
 
 ### Posts
 - `/posts` - handles POST requests to create posts
-- `/posts/delete/{id}` - handles DELETE requests to delete a post
+- `/posts/{id}` - handles DELETE requests to delete a post
 - `/posts/id/{id}` and `/posts/title/{slug}` - handles GET requests to get post details
 - `/posts/all` - handles GET requests to list all posts. Query params: `page`, `page_size`
 - `/posts/author` - handles GET requests to list posts created by author 
@@ -50,8 +50,9 @@ Query params: `page`, `page_size`, `category_id`
 - `/posts/tags` - handles GET requests to list posts with given tags.
 Query params: `page`, `page_size`, `tag_ids` where `tag_ids` is 
 comma-separated int format (e.g. `&tag_ids=1,2,3`)
-- `/posts/update/{id}` - handles PATCH requests to update the post.
+- `/posts/{id}` - handles PATCH requests to update the post.
 
 ### Comments
 - `/comments` - handles POST requests to create a comment.
+- `/comments/{id}` - handles DELETE requests to delete a comment.
 
