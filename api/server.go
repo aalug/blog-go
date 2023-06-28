@@ -80,6 +80,9 @@ func (server *Server) setupRouter() {
 	authRoutes.DELETE("/posts/:id", server.deletePost)
 	authRoutes.PATCH("/posts/:id", server.updatePost)
 
+	// --- comments ---
+	authRoutes.POST("/comments", server.createComment)
+
 	server.router = router
 }
 
