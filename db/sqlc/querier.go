@@ -6,6 +6,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
@@ -14,6 +16,7 @@ type Querier interface {
 	CreateCategory(ctx context.Context, name string) (Category, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateTag(ctx context.Context, name string) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteCategory(ctx context.Context, name string) error
@@ -28,6 +31,7 @@ type Querier interface {
 	GetOrCreateTags(ctx context.Context, tagNames []string) ([]int32, error)
 	GetPostByID(ctx context.Context, id int64) (GetPostByIDRow, error)
 	GetPostByTitle(ctx context.Context, title string) (GetPostByTitleRow, error)
+	GetSession(ctx context.Context, id uuid.UUID) (Session, error)
 	GetTagsOfPost(ctx context.Context, postID int64) ([]Tag, error)
 	GetUser(ctx context.Context, email string) (User, error)
 	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]Category, error)

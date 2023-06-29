@@ -30,8 +30,11 @@
 
 ## API endpoints
 #### Users
- - `/users` - handles POST requests to create users
- - `/users/login` - handles POST requests to log in users
+ - `/users` - handles POST requests to create users.
+ - `/users/login` - handles POST requests to log in users.
+
+### Tokens/Session
+ - `/tokens/renew` - handles  POST requests to renew the access tokens.
 
 #### Category
  - `/category` - handles POST requests to create categories

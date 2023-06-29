@@ -56,6 +56,9 @@ func (server *Server) setupRouter() {
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
 
+	// tokens/sessions
+	router.POST("/tokens/renew", server.renewAccessToken)
+
 	// --- categories ---
 	router.GET("/category", server.listCategories)
 
