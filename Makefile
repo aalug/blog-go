@@ -10,6 +10,14 @@ migrate_up:
 migrate_down:
 	migrate -path db/migrations -database "postgresql://devuser:admin@localhost:5432/blog_go_db?sslmode=disable" -verbose down
 
+# generate database documentation on the dbdocs website
+db_docs:
+	dbdocs build docs/database.dbml
+
+# generate .sql file with database schema
+db_schema:
+	dbml2sql --postgres -o docs/schema.sql docs/database.dbml
+
 # generate db related go code with sqlc
 sqlc:
 	cmd.exe /c "docker run --rm -v ${PWD}:/src -w /src kjconroy/sqlc generate"
@@ -26,4 +34,4 @@ test_coverage:
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/aalug/blog-go/db/sqlc Store
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs
