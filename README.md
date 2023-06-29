@@ -61,3 +61,11 @@ comma-separated int format (e.g. `&tag_ids=1,2,3`).
 - `/comments/{id}` - handles PATCH requests to update a comment.
 - `/comments/{post_id}` - handles GET requests to list comments of a post.
 Query params: `page` and `page_size`.
+
+## Database
+The database's schema and intricate details can be found on 
+dedicated webpage, which provides a comprehensive overview 
+of the data structure, tables, relationships, and other essential 
+information. To explore the database further, please visit
+this [dbdocs.io webpage](https://dbdocs.io/aalug/blog_go).
+Password: `bloggopassword`

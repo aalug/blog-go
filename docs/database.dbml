@@ -1,0 +1,83 @@
+Project blog_go {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Blog Go Database
+  '''
+}
+
+Table users as U {
+  id bigserial [pk]
+  username varchar [not null]
+  email varchar [unique, not null]
+  hashed_password varchar [not null]
+  password_changed_at timestamptz [not null, default: '0001-01-01 00:00:00Z']
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    email
+  }
+}
+
+Table categories as C {
+  id bigserial [pk]
+  name varchar [not null, unique]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    name
+  }
+}
+
+Table posts as P {
+  id bigserial [pk]
+  title varchar [not null]
+  description varchar [not null]
+  content text [not null]
+  author_id integer [not null, ref: > U.id]
+  category_id integer [not null, ref: > C.id]
+  image varchar [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    title
+    created_at
+  }
+}
+
+Table tags as T {
+  id serial [pk]
+  name varchar(50) [not null, unique]
+
+  Indexes {
+    name
+  }
+}
+
+Table post_tags as PT {
+  post_id bigint [pk, not null, ref: > P.id]
+  tag_id integer [pk, not null, ref: > T.id]
+}
+
+Table comments as CM {
+  id bigserial [pk]
+  content text [not null]
+  user_id integer [not null, ref: > U.id]
+  post_id integer [not null, ref: > P.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    created_at
+  }
+}
+
+Table sessions as S {
+    id uuid [pk]
+    email varchar [not null, ref: > U.email]
+    refresh_token varchar [not null]
+    user_agent varchar [not null]
+    client_ip varchar [not null]
+    is_blocked boolean [not null, default: false]
+    expires_at timestamptz [not null]
+    created_at timestamptz [not null, default: `now()`]
+}
