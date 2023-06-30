@@ -5,10 +5,10 @@ package pb;
 import "user.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/aalug/go-bank/pb";
+option go_package = "github.com/aalug/blog-go/pb";
 
 message LoginUserRequest {
-    string username = 1;
+    string email = 1;
     string password = 2;
 }
 

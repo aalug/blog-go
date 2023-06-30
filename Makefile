@@ -34,4 +34,11 @@ test_coverage:
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/aalug/blog-go/db/sqlc Store
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs
+# remove old files and generate new protobuf files
+protobuf:
+	rm -f pb/*.go
+	protoc --proto_path=protobuf --go_out=pb --go_opt=paths=source_relative \
+	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	protobuf/*.proto
+
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protobuf

@@ -4,12 +4,11 @@ package pb;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/aalug/go-bank/pb";
+option go_package = "github.com/aalug/blog-go/pb";
 
 message User {
-    string username = 1;
-    string full_name = 2;
-    string email = 3;
-    google.protobuf.Timestamp password_changed_at = 4;
-    google.protobuf.Timestamp created_at = 5;
+    string email = 1;
+    string username = 2;
+    google.protobuf.Timestamp password_changed_at = 3;
+    google.protobuf.Timestamp created_at = 4;
 }
