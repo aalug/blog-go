@@ -16,16 +16,33 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: gin.Dockerfile
     container_name: blog-go-api
     ports:
       - "8080:8080"
     environment:
       - DB_SOURCE=postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable
+      - SERVER_TYPE=gin
     depends_on:
       - db
     entrypoint: ["/app/wait-for.sh", "db:5432", "--", "/app/start.sh"]
     command: ["/app/main"]
+
+  # gRPC
+  gapi:
+    build:
+      context: .
+      dockerfile: grpc.Dockerfile
+    container_name: blog-go-gapi
+    ports:
+      - "9090:9090"
+    environment:
+      - DB_SOURCE=postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable
+      - SERVER_TYPE=gRPC
+    depends_on:
+      - db
+    entrypoint: [ "/app/wait-for.sh", "db:5432", "--", "/app/start.sh" ]
+    command: [ "/app/main" ]
 
 volumes:
   dev-db-data:

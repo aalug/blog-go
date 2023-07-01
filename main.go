@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
@@ -26,8 +27,13 @@ func main() {
 
 	store := db.NewStore(conn)
 
-	runGinServer(config, store)
-	runGrpcServer(config, store)
+	serverType := os.Getenv("SERVER_TYPE")
+	log.Println("SERVER_TYPE:", serverType)
+	if serverType == "gin" {
+		runGinServer(config, store)
+	} else {
+		runGrpcServer(config, store)
+	}
 }
 
 func runGinServer(config utils.Config, store db.Store) {
