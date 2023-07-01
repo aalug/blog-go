@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"github.com/aalug/blog-go/api"
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/gapi"
 	"github.com/aalug/blog-go/pb"
@@ -26,20 +25,7 @@ func main() {
 
 	store := db.NewStore(conn)
 
-	runGinServer(config, store)
 	runGrpcServer(config, store)
-}
-
-func runGinServer(config utils.Config, store db.Store) {
-	server, err := api.NewServer(config, store)
-	if err != nil {
-		log.Fatal("cannot create server: ", err)
-	}
-
-	err = server.Start(config.HTTPServerAddress)
-	if err != nil {
-		log.Fatal("cannot start the server:", err)
-	}
 }
 
 func runGrpcServer(config utils.Config, store db.Store) {
