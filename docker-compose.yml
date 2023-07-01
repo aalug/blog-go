@@ -22,10 +22,11 @@ services:
       - "8080:8080"
     environment:
       - DB_SOURCE=postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable
+      - SERVER_TYPE=gin
     depends_on:
       - db
     entrypoint: ["/app/wait-for.sh", "db:5432", "--", "/app/start.sh"]
-    command: ["/app/main_gin"]
+    command: ["/app/main"]
 
   # gRPC
   gapi:
@@ -37,10 +38,11 @@ services:
       - "9090:9090"
     environment:
       - DB_SOURCE=postgresql://devuser:admin@db:5432/blog_go_db?sslmode=disable
+      - SERVER_TYPE=gRPC
     depends_on:
       - db
     entrypoint: [ "/app/wait-for.sh", "db:5432", "--", "/app/start.sh" ]
-    command: [ "/app/main_grpc" ]
+    command: [ "/app/main" ]
 
 volumes:
   dev-db-data:
