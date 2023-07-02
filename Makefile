@@ -41,4 +41,8 @@ protobuf:
 	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
 	protobuf/*.proto
 
+# starts just the db container
+start_db:
+	docker-compose logs -f db
+
 .PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protobuf
