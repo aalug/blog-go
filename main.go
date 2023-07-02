@@ -28,7 +28,6 @@ func main() {
 	store := db.NewStore(conn)
 
 	serverType := os.Getenv("SERVER_TYPE")
-	log.Println("SERVER_TYPE:", serverType)
 	if serverType == "gin" {
 		runGinServer(config, store)
 	} else {
