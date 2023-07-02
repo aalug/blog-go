@@ -39,10 +39,11 @@ protobuf:
 	rm -f pb/*.go
 	protoc --proto_path=protobuf --go_out=pb --go_opt=paths=source_relative \
 	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
 	protobuf/*.proto
 
 # starts just the db container
 start_db:
 	docker-compose logs -f db
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protobuf
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protobuf, start_db
