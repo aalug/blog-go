@@ -66,7 +66,7 @@ Query params: `page` and `page_size`.
 ## Documentation
 ### API
 The API (HTTP gateway) documentation can be found at
-[this swaggerhub page](https://app.swaggerhub.com/apis/AAGULCZYNSKI/blog-go/1.0)
+[this swaggerhub page](https://app.swaggerhub.com/apis-docs/AAGULCZYNSKI/blog-go/1.0)
 and (after running the server) at http://localhost:8080/docs/
 
 ### Database
