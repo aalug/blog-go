@@ -35,11 +35,13 @@ mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/aalug/blog-go/db/sqlc Store
 
 # remove old files and generate new protobuf files
-protobuf:
+protoc:
 	rm -f pb/*.go
+	rm -f docs/swagger/*.swagger.json
 	protoc --proto_path=protobuf --go_out=pb --go_opt=paths=source_relative \
 	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
 	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
+	--openapiv2_out=docs/swagger --openapiv2_opt=allow_merge=true,merge_file_name=blog_go \
 	protobuf/*.proto
 
 # starts just the db container

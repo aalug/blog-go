@@ -6,6 +6,7 @@
 - Postgres
 - Docker
 - [Gin](https://github.com/gin-gonic/gin)
+- gRPC
 - [golang-migrate](https://github.com/golang-migrate/migrate)
 - [sqlc](https://github.com/kyleconroy/sqlc)
 - [testify](https://github.com/stretchr/testify)
@@ -62,7 +63,13 @@ comma-separated int format (e.g. `&tag_ids=1,2,3`).
 - `/comments/{post_id}` - handles GET requests to list comments of a post.
 Query params: `page` and `page_size`.
 
-## Database
+## Documentation
+### API
+The API (HTTP gateway) documentation can be found at
+[this swaggerhub page](https://app.swaggerhub.com/apis/AAGULCZYNSKI/blog-go/1.0)
+and (after running the server) at http://localhost:8080/docs/
+
+### Database
 The database's schema and intricate details can be found on 
 dedicated webpage, which provides a comprehensive overview 
 of the data structure, tables, relationships, and other essential 
