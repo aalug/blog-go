@@ -34,7 +34,7 @@ test_coverage:
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/aalug/blog-go/db/sqlc Store
 
-# remove old files and generate new protobuf files
+# remove old files and generate new protobuf files. Generate json for swagger docs
 protoc:
 	rm -f pb/*.go
 	rm -f docs/swagger/*.swagger.json
@@ -43,6 +43,7 @@ protoc:
 	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
 	--openapiv2_out=docs/swagger --openapiv2_opt=allow_merge=true,merge_file_name=blog_go \
 	protobuf/*.proto
+	statik -src=./docs/swagger -dest=./docs
 
 # starts just the db container
 start_db:
