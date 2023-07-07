@@ -6,6 +6,8 @@ import (
 	db "github.com/aalug/blog-go/db/sqlc"
 	"github.com/aalug/blog-go/pb"
 	"github.com/aalug/blog-go/utils"
+	"github.com/aalug/blog-go/validation"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -13,6 +15,11 @@ import (
 
 // LoginUser handles user login
 func (server *Server) LoginUser(ctx context.Context, request *pb.LoginUserRequest) (*pb.LoginUserResponse, error) {
+	violations := validateLoginUserRequest(request)
+	if violations != nil {
+		return nil, invalidArgumentError(violations)
+	}
+
 	user, err := server.store.GetUser(ctx, request.GetEmail())
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -63,4 +70,17 @@ func (server *Server) LoginUser(ctx context.Context, request *pb.LoginUserReques
 	}
 
 	return res, nil
+}
+
+// validateLoginUserRequest validates all the fields of the login request.
+func validateLoginUserRequest(request *pb.LoginUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := validation.ValidateEmail(request.GetEmail()); err != nil {
+		violations = append(violations, fieldViolation("email", err))
+	}
+
+	if err := validation.ValidatePassword(request.GetPassword()); err != nil {
+		violations = append(violations, fieldViolation("password", err))
+	}
+
+	return violations
 }
