@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package pb;
+
+import "user.proto";
+
+option go_package = "github.com/aalug/blog-go/pb";
+
+message UpdateUserRequest {
+    string email = 1;
+    optional string username = 2;
+    optional string password = 3;
+}
+
+message UpdateUserResponse {
+    User user = 1;
+}
