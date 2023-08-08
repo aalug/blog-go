@@ -45,8 +45,9 @@ protoc:
 	protobuf/*.proto
 	statik -src=./docs/swagger -dest=./docs
 
-# starts just the db container
-start_db:
-	docker-compose logs -f db
+# start db container and runs gRPC and HTTP gateway
+start:
+	docker-compose up -d db
+	go run main.go
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protobuf, start_db
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protoc, start

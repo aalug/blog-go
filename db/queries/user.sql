@@ -20,3 +20,11 @@ SELECT *
 FROM users
 WHERE username ILIKE '%' || @str::text || '%'
    OR email ILIKE '%' || @str::text || '%';
+
+-- name: UpdateUser :one
+UPDATE users
+SET hashed_password     = COALESCE(sqlc.narg('hashed_password'), hashed_password),
+    password_changed_at = COALESCE(sqlc.narg('password_changed_at'), password_changed_at),
+    username            = COALESCE(sqlc.narg('username'), username)
+WHERE email = sqlc.arg('email')
+RETURNING *;

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "Blog Go",
-    "version": "1.0",
+    "version": "1.1",
     "contact": {
       "name": "aalug",
       "url": "https://github.com/aalug",
@@ -23,6 +23,8 @@
   "paths": {
     "/v1/create_user": {
       "post": {
+        "summary": "Create a user.",
+        "description": "API to create a new user.",
         "operationId": "BlogGo_CreateUser",
         "responses": {
           "200": {
@@ -49,12 +51,14 @@
           }
         ],
         "tags": [
-          "BlogGo"
+          "users"
         ]
       }
     },
     "/v1/login_user": {
       "post": {
+        "summary": "Login a user.",
+        "description": "API to login a user.",
         "operationId": "BlogGo_LoginUser",
         "responses": {
           "200": {
@@ -81,7 +85,41 @@
           }
         ],
         "tags": [
-          "BlogGo"
+          "users"
+        ]
+      }
+    },
+    "/v1/update_user": {
+      "patch": {
+        "summary": "Update a user.",
+        "description": "API to update a user.",
+        "operationId": "BlogGo_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbUpdateUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbUpdateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "users"
         ]
       }
     }
@@ -142,6 +180,28 @@
         "refreshTokenExpiresAt": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "pbUpdateUserRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "pbUpdateUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/pbUser"
         }
       }
     },

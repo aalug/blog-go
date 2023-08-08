@@ -82,3 +82,31 @@ func TestQueries_ListUsersContainingString(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, users, 5)
 }
+
+func TestQueries_UpdateUser(t *testing.T) {
+	user := createRandomUser(t)
+	params := UpdateUserParams{
+		HashedPassword: sql.NullString{
+			String: utils.RandomString(6),
+			Valid:  true,
+		},
+		PasswordChangedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		Username: sql.NullString{
+			String: utils.RandomString(5),
+			Valid:  true,
+		},
+		Email: user.Email,
+	}
+
+	updatedUser, err := testQueries.UpdateUser(context.Background(), params)
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedUser)
+
+	require.Equal(t, params.Username.String, updatedUser.Username)
+	require.Equal(t, params.HashedPassword.String, updatedUser.HashedPassword)
+	require.Equal(t, params.Email, updatedUser.Email)
+	require.WithinDuration(t, params.PasswordChangedAt.Time, updatedUser.PasswordChangedAt, time.Second)
+}
