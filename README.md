@@ -7,6 +7,7 @@
 - Docker
 - [Gin](https://github.com/gin-gonic/gin)
 - gRPC
+- [asynq](https://github.com/hibiken/asynq)
 - [golang-migrate](https://github.com/golang-migrate/migrate)
 - [sqlc](https://github.com/kyleconroy/sqlc)
 - [testify](https://github.com/stretchr/testify)
