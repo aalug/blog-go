@@ -9,8 +9,11 @@ import (
 	"github.com/aalug/blog-go/gapi"
 	"github.com/aalug/blog-go/pb"
 	"github.com/aalug/blog-go/utils"
+	"github.com/aalug/blog-go/worker"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/hibiken/asynq"
 	"github.com/rakyll/statik/fs"
+	zerolog "github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -20,11 +23,13 @@ import (
 )
 
 func main() {
+	// === env ===
 	config, err := utils.LoadConfig(".")
 	if err != nil {
 		log.Fatal("cannot load env file: ", err)
 	}
 
+	// === postgres ===
 	conn, err := sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("cannot connect to the db: ", err)
@@ -32,14 +37,22 @@ func main() {
 
 	store := db.NewStore(conn)
 
+	// === redis ===
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
+
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+
 	//serverType := os.Getenv("SERVER_TYPE")
 	//if serverType == "gin" {
 	//	runGinServer(config, store)
 	//} else {
 	//	runGrpcServer(config, store)
 	//}
-	go runGatewayServer(config, store)
-	runGrpcServer(config, store)
+	go runTaskProcessor(redisOpt, store)
+	go runGatewayServer(config, store, taskDistributor)
+	runGrpcServer(config, store, taskDistributor)
 }
 
 func runGinServer(config utils.Config, store db.Store) {
@@ -54,8 +67,8 @@ func runGinServer(config utils.Config, store db.Store) {
 	}
 }
 
-func runGrpcServer(config utils.Config, store db.Store) {
-	server, err := gapi.NewServer(config, store)
+func runGrpcServer(config utils.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, store, taskDistributor)
 	if err != nil {
 		log.Fatal("cannot create server: ", err)
 	}
@@ -77,8 +90,8 @@ func runGrpcServer(config utils.Config, store db.Store) {
 	}
 }
 
-func runGatewayServer(config utils.Config, store db.Store) {
-	server, err := gapi.NewServer(config, store)
+func runGatewayServer(config utils.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, store, taskDistributor)
 	if err != nil {
 		log.Fatal("cannot create server: ", err)
 	}
@@ -123,5 +136,14 @@ func runGatewayServer(config utils.Config, store db.Store) {
 	err = http.Serve(listener, mux)
 	if err != nil {
 		log.Fatal("cannot start the HTTP gateway server:", err)
+	}
+}
+
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+	zerolog.Info().Msg("task processor started")
+	err := taskProcessor.Start()
+	if err != nil {
+		zerolog.Fatal().Err(err).Msg("failed to start task processor")
 	}
 }
