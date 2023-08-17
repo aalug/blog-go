@@ -7,6 +7,7 @@ import (
 	db "github.com/aalug/blog-go/db/sqlc"
 	_ "github.com/aalug/blog-go/docs/statik"
 	"github.com/aalug/blog-go/gapi"
+	"github.com/aalug/blog-go/mail"
 	"github.com/aalug/blog-go/pb"
 	"github.com/aalug/blog-go/utils"
 	"github.com/aalug/blog-go/worker"
@@ -51,6 +52,18 @@ func main() {
 	//	runGrpcServer(config, store)
 	//}
 	go runTaskProcessor(redisOpt, store)
+	sender := mail.NewHogSender("gulczas977@o2.pl")
+	_ = sender.SendEmail(mail.Data{
+		To:      []string{"gulczas977@o2.pl"},
+		Subject: "Some Test Subject",
+		Content: "<h1>Hello!</h1><br><hr><h5>This is test</h5>",
+		Files: []mail.AttachFile{
+			{
+				Name: "test",
+				Path: "./README.md",
+			},
+		},
+	})
 	go runGatewayServer(config, store, taskDistributor)
 	runGrpcServer(config, store, taskDistributor)
 }
