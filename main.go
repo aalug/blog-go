@@ -51,19 +51,7 @@ func main() {
 	//} else {
 	//	runGrpcServer(config, store)
 	//}
-	go runTaskProcessor(redisOpt, store)
-	sender := mail.NewHogSender("gulczas977@o2.pl")
-	_ = sender.SendEmail(mail.Data{
-		To:      []string{"gulczas977@o2.pl"},
-		Subject: "Some Test Subject",
-		Content: "<h1>Hello!</h1><br><hr><h5>This is test</h5>",
-		Files: []mail.AttachFile{
-			{
-				Name: "test",
-				Path: "./README.md",
-			},
-		},
-	})
+	go runTaskProcessor(config, redisOpt, store)
 	go runGatewayServer(config, store, taskDistributor)
 	runGrpcServer(config, store, taskDistributor)
 }
@@ -152,8 +140,9 @@ func runGatewayServer(config utils.Config, store db.Store, taskDistributor worke
 	}
 }
 
-func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+func runTaskProcessor(config utils.Config, redisOpt asynq.RedisClientOpt, store db.Store) {
+	emailSender := mail.NewHogSender(config.EmailSenderAddress)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, emailSender)
 	zerolog.Info().Msg("task processor started")
 	err := taskProcessor.Start()
 	if err != nil {

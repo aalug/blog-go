@@ -3,7 +3,6 @@ package gapi
 import (
 	"fmt"
 	db "github.com/aalug/blog-go/db/sqlc"
-	"github.com/aalug/blog-go/mail"
 	"github.com/aalug/blog-go/pb"
 	"github.com/aalug/blog-go/token"
 	"github.com/aalug/blog-go/utils"
@@ -17,7 +16,6 @@ type Server struct {
 	store           db.Store
 	tokenMaker      token.Maker
 	taskDistributor worker.TaskDistributor
-	MailChan        chan mail.Data
 }
 
 // NewServer creates a new gRPC server

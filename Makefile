@@ -50,4 +50,10 @@ start:
 	docker-compose up -d db
 	go run main.go
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protoc, start
+# flush db and restart it
+flush_db:
+	docker-compose down
+	docker volume ls -qf dangling=true | xargs docker volume rm
+	docker-compose up -d
+
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protoc, start, flush_db
