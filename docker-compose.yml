@@ -28,6 +28,21 @@ services:
     entrypoint: ["/app/wait-for.sh", "db:5432", "--", "/app/start.sh"]
     command: ["/app/main"]
 
+  redis:
+    image: redis:7.0
+    container_name: blog-go-redis
+    ports:
+      - "6379:6379"
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: blog-go-mailhog
+    logging:
+      driver: 'none'
+    ports:
+      - "1025:1025" # smtp server
+      - "8025:8025" # web ui
+
   # gRPC
 #  gapi:
 #    build:

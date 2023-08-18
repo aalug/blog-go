@@ -6,10 +6,13 @@ import (
 	"github.com/aalug/blog-go/pb"
 	"github.com/aalug/blog-go/utils"
 	"github.com/aalug/blog-go/validation"
+	"github.com/aalug/blog-go/worker"
+	"github.com/hibiken/asynq"
 	"github.com/lib/pq"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"time"
 )
 
 // CreateUser creates a new user
@@ -24,13 +27,28 @@ func (server *Server) CreateUser(ctx context.Context, request *pb.CreateUserRequ
 		return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 	}
 
-	params := db.CreateUserParams{
-		Username:       request.GetUsername(),
-		HashedPassword: hashedPassword,
-		Email:          request.GetEmail(),
+	params := db.CreateUserTxParams{
+		CreateUserParams: db.CreateUserParams{
+			Username:       request.GetUsername(),
+			HashedPassword: hashedPassword,
+			Email:          request.GetEmail(),
+		},
+		AfterCreate: func(user db.User) error {
+			taskPayload := &worker.PayloadSendVerificationEmail{
+				Email: user.Email,
+			}
+
+			opts := []asynq.Option{
+				asynq.MaxRetry(10),
+				asynq.ProcessIn(10 * time.Second),
+				asynq.Queue(worker.QueueCritical),
+			}
+
+			return server.taskDistributor.DistributeTaskSendVerificationEmail(ctx, taskPayload, opts...)
+		},
 	}
 
-	user, err := server.store.CreateUser(ctx, params)
+	txResult, err := server.store.CreateUserTx(ctx, params)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
@@ -42,7 +60,7 @@ func (server *Server) CreateUser(ctx context.Context, request *pb.CreateUserRequ
 	}
 
 	res := &pb.CreateUserResponse{
-		User: convertUser(user),
+		User: convertUser(txResult.User),
 	}
 
 	return res, nil

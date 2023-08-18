@@ -1,6 +1,6 @@
 -- SQL dump generated using DBML (dbml-lang.org)
 -- Database: PostgreSQL
--- Generated at: 2023-06-29T11:49:47.591Z
+-- Generated at: 2023-08-17T22:59:23.242Z
 
 CREATE TABLE "users" (
   "id" bigserial PRIMARY KEY,
@@ -8,7 +8,17 @@ CREATE TABLE "users" (
   "email" varchar UNIQUE NOT NULL,
   "hashed_password" varchar NOT NULL,
   "password_changed_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z',
+  "is_email_verified" bool NOT NULL DEFAULT false,
   "created_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "verify_emails" (
+  "id" bigserial PRIMARY KEY,
+  "email" varchar NOT NULL,
+  "secret_code" varchar NOT NULL,
+  "is_used" bool NOT NULL DEFAULT false,
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  "expired_at" timestamptz NOT NULL DEFAULT (now() + interval '15 minutes')
 );
 
 CREATE TABLE "categories" (
@@ -70,6 +80,8 @@ CREATE INDEX ON "posts" ("created_at");
 CREATE INDEX ON "tags" ("name");
 
 CREATE INDEX ON "comments" ("created_at");
+
+ALTER TABLE "verify_emails" ADD FOREIGN KEY ("email") REFERENCES "users" ("email");
 
 ALTER TABLE "posts" ADD FOREIGN KEY ("author_id") REFERENCES "users" ("id");
 

@@ -14,7 +14,7 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users
     (username, email, hashed_password)
 VALUES ($1, $2, $3)
-RETURNING id, username, email, hashed_password, password_changed_at, created_at
+RETURNING id, username, email, hashed_password, password_changed_at, created_at, is_email_verified
 `
 
 type CreateUserParams struct {
@@ -33,6 +33,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.HashedPassword,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
@@ -49,7 +50,7 @@ func (q *Queries) DeleteUser(ctx context.Context, email string) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, hashed_password, password_changed_at, created_at
+SELECT id, username, email, hashed_password, password_changed_at, created_at, is_email_verified
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -65,12 +66,13 @@ func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
 		&i.HashedPassword,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const listUsersContainingString = `-- name: ListUsersContainingString :many
-SELECT id, username, email, hashed_password, password_changed_at, created_at
+SELECT id, username, email, hashed_password, password_changed_at, created_at, is_email_verified
 FROM users
 WHERE username ILIKE '%' || $1::text || '%'
    OR email ILIKE '%' || $1::text || '%'
@@ -92,6 +94,7 @@ func (q *Queries) ListUsersContainingString(ctx context.Context, str string) ([]
 			&i.HashedPassword,
 			&i.PasswordChangedAt,
 			&i.CreatedAt,
+			&i.IsEmailVerified,
 		); err != nil {
 			return nil, err
 		}
@@ -112,7 +115,7 @@ SET hashed_password     = COALESCE($1, hashed_password),
     password_changed_at = COALESCE($2, password_changed_at),
     username            = COALESCE($3, username)
 WHERE email = $4
-RETURNING id, username, email, hashed_password, password_changed_at, created_at
+RETURNING id, username, email, hashed_password, password_changed_at, created_at, is_email_verified
 `
 
 type UpdateUserParams struct {
@@ -137,6 +140,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.HashedPassword,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }

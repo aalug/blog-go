@@ -24,7 +24,7 @@ sqlc:
 
 # run all tests
 test:
-	go test -v -cover ./...
+	go test -v -cover -short ./...
 
 # run tests in the given path (p) and display results in the html file
 test_coverage:
@@ -50,4 +50,10 @@ start:
 	docker-compose up -d db
 	go run main.go
 
-.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protoc, start
+# flush db and restart it
+flush_db:
+	docker-compose down
+	docker volume ls -qf dangling=true | xargs docker volume rm
+	docker-compose up -d
+
+.PHONY: generate_migrations, migrate_up, migrate_down, sqlc, test, test_coverage, mock, db_schema, db_docs, protoc, start, flush_db
