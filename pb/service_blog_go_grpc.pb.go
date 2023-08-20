@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BlogGo_CreateUser_FullMethodName = "/pb.BlogGo/CreateUser"
-	BlogGo_LoginUser_FullMethodName  = "/pb.BlogGo/LoginUser"
-	BlogGo_UpdateUser_FullMethodName = "/pb.BlogGo/UpdateUser"
+	BlogGo_CreateUser_FullMethodName  = "/pb.BlogGo/CreateUser"
+	BlogGo_LoginUser_FullMethodName   = "/pb.BlogGo/LoginUser"
+	BlogGo_VerifyEmail_FullMethodName = "/pb.BlogGo/VerifyEmail"
+	BlogGo_UpdateUser_FullMethodName  = "/pb.BlogGo/UpdateUser"
 )
 
 // BlogGoClient is the client API for BlogGo service.
@@ -30,6 +31,7 @@ const (
 type BlogGoClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*LoginUserResponse, error)
+	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 }
 
@@ -59,6 +61,15 @@ func (c *blogGoClient) LoginUser(ctx context.Context, in *LoginUserRequest, opts
 	return out, nil
 }
 
+func (c *blogGoClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error) {
+	out := new(VerifyEmailResponse)
+	err := c.cc.Invoke(ctx, BlogGo_VerifyEmail_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *blogGoClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
 	out := new(UpdateUserResponse)
 	err := c.cc.Invoke(ctx, BlogGo_UpdateUser_FullMethodName, in, out, opts...)
@@ -74,6 +85,7 @@ func (c *blogGoClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, op
 type BlogGoServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error)
+	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
 	mustEmbedUnimplementedBlogGoServer()
 }
@@ -87,6 +99,9 @@ func (UnimplementedBlogGoServer) CreateUser(context.Context, *CreateUserRequest)
 }
 func (UnimplementedBlogGoServer) LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedBlogGoServer) VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyEmail not implemented")
 }
 func (UnimplementedBlogGoServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
@@ -140,6 +155,24 @@ func _BlogGo_LoginUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BlogGo_VerifyEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlogGoServer).VerifyEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BlogGo_VerifyEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlogGoServer).VerifyEmail(ctx, req.(*VerifyEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _BlogGo_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateUserRequest)
 	if err := dec(in); err != nil {
@@ -172,6 +205,10 @@ var BlogGo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _BlogGo_LoginUser_Handler,
+		},
+		{
+			MethodName: "VerifyEmail",
+			Handler:    _BlogGo_VerifyEmail_Handler,
 		},
 		{
 			MethodName: "UpdateUser",
