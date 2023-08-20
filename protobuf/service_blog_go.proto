@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "rpc_create_user.proto";
 import "rpc_login_user.proto";
 import "rpc_update_user.proto";
+import "rpc_verify_email.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
 option go_package = "github.com/aalug/blog-go/pb";
@@ -29,10 +30,10 @@ service BlogGo {
       body: "*"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-       description: "API to create a new user.";
-       summary: "Create a user.";
-       tags: "users";
-     };
+      description: "API to create a new user.";
+      summary: "Create a user.";
+      tags: "users";
+    };
   };
   rpc LoginUser (LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
@@ -40,20 +41,30 @@ service BlogGo {
       body: "*"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-       description: "API to login a user.";
-       summary: "Login a user.";
-       tags: "users";
-     };
+      description: "API to login a user.";
+      summary: "Login a user.";
+      tags: "users";
+    };
   };
-   rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse) {
-     option (google.api.http) = {
-       patch: "/v1/update_user"
-       body: "*"
-     };
-     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-       description: "API to update a user.";
-       summary: "Update a user.";
-       tags: "users";
-     };
-   };
+  rpc VerifyEmail (VerifyEmailRequest) returns (VerifyEmailResponse) {
+    option (google.api.http) = {
+      get: "/v1/verify_email"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      description: "API to verify a user email.";
+      summary: "Verify email.";
+      tags: "users";
+    };
+  };
+  rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = {
+      patch: "/v1/update_user"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      description: "API to update a user.";
+      summary: "Update a user.";
+      tags: "users";
+    };
+  };
 }
